@@ -41,7 +41,7 @@ GitHub issue numbers in brackets (imedkablavi/ANALYSIS-PLATFORM-).
 | T-040 Frequent pattern analysis [#9] | 🔶 | recurring pairs / exact groups |
 | T-041 Sequential pattern analysis [#9] | 🔶 | trigrams with support |
 | T-042 Dynamic graph change analysis [#9] | 🔶 | yearly persistence, new ties, components |
-| T-043 Seasonality-aware temporal baseline [#14] | ⏳ | new (audit finding: July peak) |
+| T-043 Seasonality-aware temporal baseline [#14] | 🔶 | causal same-month baseline implemented; comparison retained; MATLAB execution pending |
 
 ## M5 — Multimedia application
 | Task | Status | Notes |
@@ -58,8 +58,8 @@ GitHub issue numbers in brackets (imedkablavi/ANALYSIS-PLATFORM-).
 ## M6 — Evaluation & delivery
 | Task | Status | Notes |
 |---|---|---|
-| T-060 Evaluation scripts [#11] | 🔶 | E1–E9 implemented; E10 protocol |
-| T-061 Reproducibility run [#11] | ⏳ | first MATLAB execution (REPRODUCIBILITY §4) |
+| T-060 Evaluation scripts [#11] | 🔶 | E1–E9 implemented; synthetic IF evaluation uses clean-train novelty scoring |
+| T-061 Reproducibility run [#11] | ⏳ | first MATLAB execution remains the main gate |
 | T-062 Demo scenario [#12] | 🔶 | docs/DEMO_SCENARIO.md updated |
 | T-063 Technical report [#12] | ⏳ | METHODOLOGY + AUDIT provide the skeleton |
 | T-064 Final presentation [#12] | ⏳ | |
