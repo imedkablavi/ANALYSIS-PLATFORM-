@@ -41,7 +41,7 @@ GitHub issue numbers in brackets (imedkablavi/ANALYSIS-PLATFORM-).
 | T-040 Frequent pattern analysis [#9] | 🔶 | recurring pairs / exact groups |
 | T-041 Sequential pattern analysis [#9] | 🔶 | trigrams with support |
 | T-042 Dynamic graph change analysis [#9] | 🔶 | yearly persistence, new ties, components |
-| T-043 Seasonality-aware temporal baseline | ⏳ | new (audit finding: July peak) |
+| T-043 Seasonality-aware temporal baseline [#14] | ⏳ | new (audit finding: July peak) |
 
 ## M5 — Multimedia application
 | Task | Status | Notes |

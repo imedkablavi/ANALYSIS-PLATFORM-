@@ -69,7 +69,7 @@ Centrality must never be described as "leadership" or "importance" in the report
 | Solved cases only, right-censored at the end | recent declines are artefacts | series ends 2020-08 |
 | Sparse pre-2014 data | no reliable baseline before 2014 | excluded from system series (V45) |
 | 66 % of offenders have one case | most offenders cannot be profiled | eligibility ≥ 3 crimes, explicit "insufficient history" |
-| No seasonal term in the rolling baseline | July peaks may be flagged | open task T-043 (seasonal baseline) |
+| No seasonal term in the rolling baseline | July peaks may be flagged | open task T-043 (seasonal baseline, issue #14) |
 | Normalized coordinates of unknown extent | distances are relative, not metres | never interpreted as distances |
 | Derived event alphabet | sequences describe partner novelty and movement, not crime type | stated wherever sequences are shown |
 | Transductive scoring (fit and score on the same population) | scores are relative to this dataset | stated; temporal hold-out is future work |
