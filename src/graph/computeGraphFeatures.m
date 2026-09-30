@@ -1,20 +1,24 @@
 function graphFeatures = computeGraphFeatures(G)
-%COMPUTEGRAPHFEATURES Compute first-version node-level network features.
+%COMPUTEGRAPHFEATURES Compute node-level network features in O(E) time.
 
 n = numnodes(G);
-graphFeatures = table(string(G.Nodes.Name), ...
-    outdegree(G), indegree(G), ...
-    zeros(n,1), zeros(n,1), zeros(n,1), ...
+nodeNames = string(G.Nodes.Name);
+
+outDeg = outdegree(G);
+inDeg = indegree(G);
+
+edgeNames = string(G.Edges.EndNodes);
+% EndNodes is an Mx2 array; reshape preserves source/target columns.
+edgeNames = reshape(edgeNames, [], 2);
+
+sourceIdx = findnode(G, edgeNames(:,1));
+targetIdx = findnode(G, edgeNames(:,2));
+
+weightedOut = accumarray(sourceIdx, G.Edges.Weight, [n 1], @sum, 0);
+weightedIn = accumarray(targetIdx, G.Edges.Weight, [n 1], @sum, 0);
+
+graphFeatures = table( ...
+    nodeNames, outDeg, inDeg, outDeg + inDeg, weightedOut, weightedIn, ...
     'VariableNames', {'entity_id','out_degree','in_degree', ...
     'total_degree','weighted_out_degree','weighted_in_degree'});
-
-graphFeatures.total_degree = graphFeatures.out_degree + graphFeatures.in_degree;
-
-sourceNames = string(G.Edges.EndNodes(:,1));
-targetNames = string(G.Edges.EndNodes(:,2));
-for i = 1:n
-    id = string(G.Nodes.Name(i));
-    graphFeatures.weighted_out_degree(i) = sum(G.Edges.Weight(sourceNames == id));
-    graphFeatures.weighted_in_degree(i) = sum(G.Edges.Weight(targetNames == id));
-end
 end
