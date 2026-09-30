@@ -41,7 +41,8 @@ GitHub issue numbers in brackets (imedkablavi/ANALYSIS-PLATFORM-).
 | T-040 Frequent pattern analysis [#9] | 🔶 | recurring pairs / exact groups |
 | T-041 Sequential pattern analysis [#9] | 🔶 | trigrams with support |
 | T-042 Dynamic graph change analysis [#9] | 🔶 | yearly persistence, new ties, components |
-| T-043 Seasonality-aware temporal baseline [#14] | 🔶 | causal same-month baseline implemented; comparison retained; MATLAB execution pending |
+| T-043 Seasonality-aware temporal baseline [#14] | 🔶 | causal same-month baseline implemented + regression test; comparison retained; MATLAB execution pending |
+| T-044 Synthetic Isolation Forest evaluation [#15] | 🔶 | clean-reference training + injected scoring; MATLAB execution pending |
 
 ## M5 — Multimedia application
 | Task | Status | Notes |
