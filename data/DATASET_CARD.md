@@ -1,35 +1,55 @@
-# Dataset Card
-
-Status: **TBD — fill only after inspecting the downloaded artifact.**
+# Dataset Card — Primary Artifact
 
 ## Identity
-- Dataset name:
-- Source organization:
-- Source URL:
-- Download date:
-- Version / commit:
-- Local file name:
 
-## Legal / privacy
-- License / terms:
-- Redistribution allowed?:
-- Identifiers anonymized?:
-- Sensitive fields present?:
-- Publication restrictions:
+- Dataset family: ROXANNE / Criminal Network Analysis and Visualization
+- Selected artifact: `israel_lea_inp_burglary_offender_id_network.json`
+- Upstream repository: https://github.com/erichoang/criminal-network-visualization
+- Upstream blob SHA: `3afe9cbb4e313fb056f1b115c92a3f750f4698b9`
+- Inspection date: 2026-09-30
 
-## Structure
-- Number of records:
-- Number of entities:
-- Number of edges/interactions:
-- Temporal coverage:
-- Spatial fields:
-- Labels / ground truth:
+## Exact inspected artifact
 
-## Schema
-Link each production feature to an actual source field. Do not guess.
+- Nodes/offenders: **17,237**
+- Links: **21,302**
+- Unique crimes: **24,087**
+- Flattened offender-crime rows: **34,156**
+- Earliest observed date: **2010-12-01**
+- Latest observed date: **2020-09-28**
+- X range: **0–1**
+- Y range: **0–1**
+- Edge weight range: **1–37**
+- Edge type observed: `relation`
+- Observed flag: true for inspected links
 
-## Preprocessing
-Document missing-value handling, deduplication, timestamp normalization, scaling, and any derived fields.
+## Source description
+
+The upstream documentation describes an anonymized burglary dataset from the Israel National Police with roughly 23,000 solved cases and network representations. The exact artifact above is the code/schema authority for this project.
+
+## Ground truth
+
+Do not assume that an anomaly label exists in this artifact.
+
+The project will distinguish:
+
+- source facts,
+- derived behavioral features,
+- anomaly scores,
+- any externally documented ground truth.
+
+No label will be fabricated.
+
+## Privacy
+
+- IDs are anonymized in the selected artifact.
+- Coordinates are normalized.
+- The project will not attempt re-identification or coordinate reversal.
+- Raw data will remain local unless redistribution terms are explicitly confirmed.
+
+## Intended use
+
+Analyze observable behavioral patterns in an anonymized network. Model outputs are deviations from an analytical baseline, not determinations about criminality.
 
 ## Citation
-Record the dataset citation exactly as required by the source.
+
+Use the upstream project's required citation in the final report.
