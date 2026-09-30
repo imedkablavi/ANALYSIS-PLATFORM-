@@ -41,6 +41,21 @@ verifyEqual(tc, nnz(r.is_high | r.is_low), 1);
 verifyEqual(tc, r.baseline_median(11), 10);
 end
 
+function testSeasonalBaselineIgnoresNormalSeasonalPeaks(tc)
+% A normal July peak must not be treated as anomalous when enough prior
+% July observations establish the seasonal reference; an injected spike is.
+months = datetime(2014,1,1) + calmonths(0:47)';
+x = 10 * ones(48,1);
+x(month(months) == 7) = 20;
+x(43) = 50;  % July 2017: deliberate spike after three prior Julys.
+r = detectTemporalAnomalies(x, 12, 6, 3.5, "seasonal_same_month", ...
+    months, 5, 3);
+verifyFalse(tc, r.is_high(31));  % July 2016 seasonal peak = 20 vs prior Julys = 20.
+verifyTrue(tc, r.is_high(43));
+verifyEqual(tc, r.baseline_median(43), 20);
+verifyEqual(tc, r.baseline_count(43), 3);
+end
+
 function testChangePoint(tc)
 noise = repmat([0 1 -1]', 8, 1);
 x = [10 * ones(12,1); 30 * ones(12,1)] + noise;
