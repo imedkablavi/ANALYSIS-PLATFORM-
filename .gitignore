@@ -27,3 +27,7 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated analysis bundle
+outputs/model/*
+!outputs/model/.gitkeep
