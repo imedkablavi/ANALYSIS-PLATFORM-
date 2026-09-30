@@ -1,38 +1,85 @@
-function result = detectTemporalAnomalies(x, window, minBins, zThreshold)
-%DETECTTEMPORALANOMALIES Causal rolling robust z-scores for a count series.
+function result = detectTemporalAnomalies(x, window, minBins, zThreshold, mode, binStart, seasonalLookbackYears, seasonalMinSamples)
+%DETECTTEMPORALANOMALIES Causal rolling or seasonal robust z-scores.
 %
 %   RESULT = DETECTTEMPORALANOMALIES(X, WINDOW, MINBINS, ZTHRESHOLD)
-%   For each bin t, the baseline is the median of the previous WINDOW bins
-%   (X(t-WINDOW) .. X(t-1)); bin t itself and the future are never used,
-%   so the score is available in real time (no look-ahead leakage).
-%       z_t = (x_t - median) / (1.4826 * MAD)
-%   (modified z-score, Iglewicz & Hoaglin 1993). When MAD = 0 the scale
-%   falls back to 1.2533 * mean absolute deviation, then to 1.
-%   Bins with fewer than MINBINS baseline bins get NaN.
+%   uses a causal rolling baseline: the previous WINDOW bins.
 %
-%   RESULT table: value, baseline_median, baseline_scale, robust_z,
-%   is_high (z >= threshold), is_low (z <= -threshold).
+%   RESULT = DETECTTEMPORALANOMALIES(..., MODE, BINSTART, ...)
+%   supports:
+%     "rolling"             previous WINDOW bins (default)
+%     "seasonal_same_month" earlier bins with the same calendar month
+%
+%   For both modes, the current and future bins are never used. The robust
+%   center/scale is computed by robustCenterScale (median / 1.4826*MAD with
+%   explicit fallbacks). Seasonal mode is a transparent seasonal-naive
+%   baseline; it requires BINSTART and enough prior same-month observations.
+%
+%   RESULT fields: value, baseline_median, baseline_scale, robust_z,
+%   is_high, is_low, baseline_count, baseline_years.
 
 arguments
     x (:,1) double
     window (1,1) double {mustBeInteger, mustBePositive} = 12
     minBins (1,1) double {mustBeInteger, mustBePositive} = 6
     zThreshold (1,1) double = 3.5
+    mode (1,1) string {mustBeMember(mode,["rolling","seasonal_same_month"])} = "rolling"
+    binStart (:,1) datetime = datetime.empty(0,1)
+    seasonalLookbackYears (1,1) double {mustBeInteger, mustBePositive} = 5
+    seasonalMinSamples (1,1) double {mustBeInteger, mustBePositive} = 3
 end
 
+if numel(x) ~= numel(binStart) && mode == "seasonal_same_month"
+    error("MOSAIC:TemporalLengthMismatch", ...
+        "X and BINSTART must have the same number of elements for seasonal mode.");
+end
+
+x = x(:);
 n = numel(x);
 med = NaN(n,1);
 scale = NaN(n,1);
-for t = 1:n
-    ref = x(max(1, t - window):t-1);
-    ref = ref(~isnan(ref));
-    if numel(ref) < minBins
-        continue;
+nRef = zeros(n,1);
+refYears = strings(n,1);
+
+if mode == "rolling"
+    for t = 1:n
+        ref = x(max(1, t - window):t-1);
+        ref = ref(~isnan(ref));
+        nRef(t) = numel(ref);
+        if nRef(t) < minBins
+            continue;
+        end
+        [med(t), scale(t)] = robustCenterScale(ref);
+        if ~isnan(x(t))
+            % Do not let a zero/degenerate reference produce NaN surprises.
+            % robustCenterScale returns scale=1 for an all-constant reference.
+        end
+        if ~isnan(x(t))
+            % score below, after the shared reference construction
+        end
+        refYears(t) = string(t - (nRef(t) - 1)):string(t); %#ok<NBRAK>
     end
-    [med(t), scale(t)] = robustCenterScale(ref);
+else
+    binStart = binStart(:);
+    yy = year(binStart);
+    mm = month(binStart);
+    for t = 1:n
+        if isnat(binStart(t))
+            continue;
+        end
+        refMask = ~isnan(x) & ~isnat(binStart) & ...
+            mm == mm(t) & yy < yy(t) & yy >= (yy(t) - seasonalLookbackYears);
+        ref = x(refMask);
+        nRef(t) = numel(ref);
+        if nRef(t) < seasonalMinSamples
+            continue;
+        end
+        [med(t), scale(t)] = robustCenterScale(ref);
+        refYears(t) = strjoin(string(yy(refMask)), ",");
+    end
 end
+
 z = (x - med) ./ scale;
 result = table(x, med, scale, z, z >= zThreshold, z <= -zThreshold, ...
-    'VariableNames', {'value','baseline_median','baseline_scale', ...
-    'robust_z','is_high','is_low'});
+    nRef, refYears, 'VariableNames', {'value','baseline_median', ...
+    'baseline_scale','robust_z','is_high','is_low','baseline_count','baseline_years'});
 end
