@@ -43,11 +43,24 @@ end
 % Explicit RGB colours: colormap position for scored nodes, grey for
 % unscored (insufficient history), red for the selected entity.
 cmap = parula(256);
-lo = min(score);
-hi = max(score);
-if isnan(lo) || hi <= lo
+% Use a stable global scale so node colors remain comparable when the
+% selected ego network changes. Local rescaling would make the same color
+% represent different anomaly scores from one selection to another.
+allScore = bundle.entities.iforest_score;
+if all(isnan(allScore))
+    allScore = bundle.entities.baseline_score;
+end
+allScore = allScore(~isnan(allScore));
+if isempty(allScore)
     lo = 0;
     hi = 1;
+else
+    lo = min(allScore);
+    hi = max(allScore);
+    if hi <= lo
+        lo = lo - 0.5;
+        hi = hi + 0.5;
+    end
 end
 pos = round((score - lo) / (hi - lo) * 255) + 1;
 colors = repmat([0.75 0.75 0.75], numel(cand), 1);
