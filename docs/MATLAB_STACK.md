@@ -1,25 +1,16 @@
 # MATLAB Stack
 
-## Required
+| Component | Status | Used for |
+|---|---|---|
+| MATLAB R2021b+ (base) | required | tables, datetime, `graph` (`centrality`, `conncomp`, `biconncomp`, `distances`, `subgraph`), sparse algebra, `gammainc`, App Designer components, `timer`, `sound`, `exportgraphics`, `jsondecode/jsonencode`, `matlab.unittest` |
+| Statistics and Machine Learning Toolbox | required for Isolation Forest | `iforest`, `isanomaly` only; everything else (quantiles, ranks, AUC, AP, Spearman) is base MATLAB so tests run without it |
+| Signal Processing Toolbox | not used | change points are implemented transparently (`detectChangePoints`) instead of `findchangepts` |
+| Image Processing / Computer Vision | not used | no image data |
+| Audio Toolbox | not used | the optional cue uses base `sound` |
+| Parallel Computing Toolbox | not used | largest workload (~1,200 small forests in E5–E7) is minutes, not hours |
 
-- MATLAB
-- MATLAB App Designer
-- Statistics and Machine Learning Toolbox
+The minimum release is inferred from the functions used; no specific release has been executed
+yet (docs/REPRODUCIBILITY.md §4).
 
-## Conditional
-
-- Image Processing Toolbox
-- Computer Vision Toolbox
-- Signal Processing Toolbox
-- Audio Toolbox
-- Parallel Computing Toolbox
-
-Use each only when a real dataset or performance bottleneck justifies it.
-
-## Why MATLAB
-
-App Designer is MATLAB's interactive environment for designing an app layout and programming its behavior. Current MATLAB documentation also provides built-in anomaly detection methods, including Isolation Forest, One-Class SVM, Local Outlier Factor, Robust Random Cut Forest, and Mahalanobis-distance-based approaches.
-
-Sources:
-- https://www.mathworks.com/help/matlab/ref/appdesigner.html
-- https://www.mathworks.com/help/stats/anomaly-detection.html
+Sources: MATLAB documentation for App Designer, `iforest`, anomaly detection overview, `jsondecode`
+(field-name conversion with `matlab.lang.makeValidName`).

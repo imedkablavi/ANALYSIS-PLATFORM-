@@ -34,13 +34,19 @@ Observed schema:
 Full inspection:
 `docs/DATASET_SCHEMA_INSPECTION.md`
 
+## Verified structural facts (audit 2026-09-30)
+
+- all links reciprocal: 10,651 undirected relations; weight = number of shared crimes
+- `num_of_offenders` equals attached offenders for every crime
+- dates are day resolution; 91 rows before 2014; recent months right-censored
+- 3,260 offenders with ≥ 3 crimes (anomaly population)
+
 ## Current implementation status
 
-Foundation: complete.
-
-First data/feature implementation slice: complete in repository.
-
-Local execution status: **blocked only by local dataset availability and MATLAB execution**; no performance claims have been made.
+Full analytical pipeline, experiments (E1–E9), explanations and the multimedia application are
+implemented in MATLAB and statically parsed. **Nothing has been executed in MATLAB yet**; the first
+execution gate is defined in docs/REPRODUCIBILITY.md §4. No performance claims have been made.
+Audit: docs/AUDIT_2026-09-30.md.
 
 ## Non-goals
 
