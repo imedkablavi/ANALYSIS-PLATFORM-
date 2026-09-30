@@ -1,0 +1,29 @@
+# MATLAB
+*.asv
+*.mlapp~
+*.mex*
+
+# MATLAB generated
+slprj/
+codegen/
+
+# Local datasets / potentially restricted files
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Models and large artifacts
+models/*.mat
+models/*.onnx
+outputs/experiments/*
+outputs/reports/*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
