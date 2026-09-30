@@ -28,6 +28,11 @@ run scripts/generate_report_figures.m % 6. report figures (same plotting code as
 run scripts/launch_app.m              % 7. interactive multimedia application
 ```
 
+The configured production temporal anomaly rule is stored in
+`cfg.temporal.anomaly_method`. The default is `seasonal_same_month`, a causal same-calendar-month
+baseline using up to five prior years and at least three prior observations. The original
+12-month rolling rule remains available for comparison.
+
 Without MATLAB, the dataset facts can be reproduced with:
 
 ```bash
