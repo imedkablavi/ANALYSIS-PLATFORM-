@@ -129,7 +129,10 @@ for tg = targets
                 rows(end+1, :) = {tg, sh, rep, strjoin(sets{s}, "+"), "baseline", ...
                     rankAuc(bs, lab), averagePrecision(bs, lab), precisionAtK(bs, lab, m)}; %#ok<AGROW>
                 if useIF
-                    is = scoreIsolationForest(Zi(:, cols), Zi(:, cols), nl, no, seed + rep);
+                    % Novelty-detection evaluation: fit on the clean reference
+                    % population and score the contaminated synthetic sample.
+                    % This prevents injected anomalies from contaminating training.
+                    is = scoreIsolationForest(Z(:, cols), Zi(:, cols), nl, no, seed + rep);
                     rows(end+1, :) = {tg, sh, rep, strjoin(sets{s}, "+"), "iforest", ...
                         rankAuc(is, lab), averagePrecision(is, lab), precisionAtK(is, lab, m)}; %#ok<AGROW>
                 end
