@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — post-audit hardening
+
+- Fixed synthetic Isolation Forest evaluation to train on clean reference data and score contaminated synthetic observations as novelty detection.
+- Added configurable causal temporal anomaly baselines: rolling 12-month and same-calendar-month seasonal reference.
+- Production temporal mode now defaults to the seasonal same-month baseline; the rolling rule remains available for comparison.
+- Added seasonality regression coverage and made the configured baseline label visible in the timeline.
+- Stabilized ego-network anomaly color scaling globally so colors remain comparable across entity selections.
+- MATLAB execution remains the final verification gate; no real runtime metrics are claimed yet.
+
 ## 0.2.0 — Audit and analytical core (2026-09-30)
 
 Audit: docs/AUDIT_2026-09-30.md. MATLAB code statically parsed; **not executed** (no MATLAB in the
