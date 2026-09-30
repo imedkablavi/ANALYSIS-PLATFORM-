@@ -16,8 +16,13 @@ s = bundle.temporal.series;
 a = bundle.temporal.crime_anomalies;
 plot(ax, s.bin_start, s.crimes, '-', 'Color', [0.25 0.45 0.75], 'LineWidth', 1.2, ...
     'DisplayName', 'Crimes per month');
+if isfield(bundle.temporal, 'anomaly_method') && bundle.temporal.anomaly_method == "seasonal_same_month"
+    baselineLabel = 'Seasonal baseline (same calendar month)';
+else
+    baselineLabel = 'Causal baseline (previous 12 months)';
+end
 plot(ax, s.bin_start, a.baseline_median, ':', 'Color', [0.4 0.4 0.4], ...
-    'DisplayName', 'Causal baseline (12-month median)');
+    'DisplayName', baselineLabel);
 hi = a.is_high;
 lo = a.is_low;
 if any(hi)
@@ -44,7 +49,8 @@ if ~isnat(cursorTime)
 end
 hold(ax, 'off');
 ylabel(ax, 'Crimes');
-title(ax, 'Activity over time (solved cases; last months right-censored)');
+methodLabel = baselineLabel;
+title(ax, 'Activity over time — ' + methodLabel + ' (solved cases; last months right-censored)');
 legend(ax, 'Location', 'northwest', 'Box', 'off');
 grid(ax, 'on');
 end
