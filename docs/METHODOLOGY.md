@@ -35,9 +35,11 @@ never 0.
 - **System series**: monthly crimes, active offenders, new offenders, co-offending share and mean
   group size over **2014-01 to 2020-08** (end exclusive 2020-09-01). Excluded: 2010–2013 (91 rows,
   too sparse for a baseline) and September 2020 (incomplete; solved-case data are right-censored).
-- **Unusual months**: causal modified z-score against the median / 1.4826·MAD of the previous 12
-  months (≥ 6 required); |z| ≥ 3.5 (Iglewicz & Hoaglin 1993). The current and future months are
-  never part of their own baseline, so the rule works in replay.
+- **Unusual months**: the configured production rule is a causal same-calendar-month robust
+  baseline: compare a month only with earlier observations of that same month, using up to five
+  prior years and requiring at least three prior samples. |z| ≥ 3.5 is the evidence threshold.
+  The original causal 12-month rolling rule is retained as a comparison. Neither rule uses the
+  current or future month, so both are replay-safe.
 - **Level shifts**: penalized binary segmentation on the monthly count (penalty 2σ²·log n,
   σ from first differences; Truong et al. 2020), minimum segment 6 months, at most 5 changes.
 - **Entity rhythm**: inter-event gap statistics, burstiness B = (σ−μ)/(σ+μ) (Goh & Barabási 2008),
