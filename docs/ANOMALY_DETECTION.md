@@ -24,7 +24,9 @@ robust-SD units. Both are relative to this population and this dataset.
 - The **baseline** is what a reviewer can recompute by hand; every flag decomposes into feature
   shares.
 - **Isolation Forest** captures unusual *combinations* that no single z-score shows, scales
-  linearly and is available in MATLAB (`iforest`/`isanomaly`, R2021b+).
+  linearly and is available in MATLAB (`iforest`/`isanomaly`). For synthetic evaluation it is
+  used in novelty-detection mode: the forest is fitted on uncontaminated reference rows and scores
+  the injected observations.
 - **Not added**: LOF (density-based, sensitive to `k` and to many tied values in count features),
   One-Class SVM (kernel and ν selection impossible without labels), Robust Random Cut Forest
   (streaming focus not needed). Adding models without an evaluation signal would only add
@@ -41,3 +43,18 @@ Seed, NumLearners, NumObservationsPerLearner, population size, feature count, dr
 agreement are written to `outputs/experiments/pipeline_run.json`.
 
 Sources: Liu, Ting & Zhou (2008); Iglewicz & Hoaglin (1993); MATLAB `iforest` documentation.
+
+
+## Evaluation interpretation
+
+There are two distinct uses in this project:
+
+1. **Real-data descriptive outlier ranking:** the forest and robust baseline score the eligible
+   reference population itself because no external labels or uncontaminated "normal" set exist.
+2. **Controlled synthetic sensitivity testing:** the forest is trained on clean reference data and
+   scores a separately injected sample. This avoids contaminating the forest with the synthetic
+   anomalies.
+
+MathWorks documents this distinction explicitly: uncontaminated training data should be used for
+Isolation Forest novelty detection with `isanomaly`. See the official documentation:
+https://www.mathworks.com/help/stats/iforest.html
