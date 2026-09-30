@@ -65,7 +65,7 @@ src/data                  load, flatten, validate, report, dataset hash
 src/preprocessing         canonical events, crime table, relation table
 src/features              registry, behavioural features, merge
 src/graph                 graph, structural features, k-core, snapshots, dynamics
-src/temporal              series, causal anomalies, change points
+src/temporal              series, causal rolling/seasonal anomalies, change points
 src/spatial               normalized grid hotspots
 src/sequence              alphabet, encoding, Markov model, novelty, n-grams
 src/pattern               recurring pairs and groups
