@@ -2,11 +2,45 @@
 
 ## Objective
 
-Build a one-month university project that implements the professor's network/behavior analysis topic at a substantially deeper level while remaining realistic to finish.
+Build a one-month university project that implements the professor's assigned network/behavior analysis topic at a substantially deeper level while remaining realistic to finish.
 
 ## Interpretation
 
 The project focuses on detecting and explaining **observable suspicious/anomalous behavioral patterns** inside a network of interactions, events, communications, locations, or related entities. The exact wording of the assignment must remain the authoritative scope reference.
+
+## Current verified primary artifact
+
+The selected upstream artifact is:
+
+`israel_lea_inp_burglary_offender_id_network.json`
+
+Verified on 2026-09-30 from upstream blob SHA:
+
+`3afe9cbb4e313fb056f1b115c92a3f750f4698b9`
+
+Observed schema:
+
+- NetworkX JSON
+- directed=true
+- multigraph=false
+- 17,237 offender nodes
+- 21,302 relation links
+- 24,087 unique crime IDs
+- 34,156 offender-crime association rows
+- crime-detail fields: X, Y, date, num_of_offenders
+- link fields: weight, type, observed, source, target
+- observed crime-detail dates: 2010-12-01 through 2020-09-28
+
+Full inspection:
+`docs/DATASET_SCHEMA_INSPECTION.md`
+
+## Current implementation status
+
+Foundation: complete.
+
+First data/feature implementation slice: complete in repository.
+
+Local execution status: **blocked only by local dataset availability and MATLAB execution**; no performance claims have been made.
 
 ## Non-goals
 
@@ -23,10 +57,6 @@ The project focuses on detecting and explaining **observable suspicious/anomalou
 3. Does combining node-level and edge-level features improve detection?
 4. Can repeated/sequential patterns explain why a data point was flagged?
 5. Can the same analytical result be communicated more effectively through interactive multimedia visualization than through tables alone?
-
-## Working hypothesis
-
-A multi-view representation that combines temporal, relational/network, and event-sequence information should provide richer anomaly evidence than a single static network metric, while an interactive visualization should improve the user's ability to inspect and understand detected patterns.
 
 ## Delivery constraint
 
