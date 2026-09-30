@@ -1,74 +1,71 @@
 # Dataset Strategy
 
-## Primary candidate — ROXANNE-linked burglary network data
+## Primary artifact — burglary offender network
 
-The public `erichoang/criminal-network-visualization` repository documents a primary burglary dataset containing about 23,000 solved burglary reports in Israel from 2012–2021. The repository says the records were provided by the Israel National Police, anonymized, and include crime identifiers, anonymized offender identifiers, min-max-scaled site coordinates, timestamps, and parameterized free-text case-description embeddings. It also provides offender-network and crime-network JSON/NDJSON representations.
+Public repository:
+https://github.com/erichoang/criminal-network-visualization
 
-Source:
-- https://github.com/erichoang/criminal-network-visualization
-- Dataset documentation: https://github.com/erichoang/criminal-network-visualization/blob/main/datasets/preprocessed/README.md
+The upstream preprocessing documentation describes a burglary dataset with roughly 23,000 solved burglary reports in Israel and identifies offender-network and crime-network representations.
 
-### Why this is the strongest primary candidate
+### Exact artifact selected for implementation
 
-- directly related to the professor's topic,
-- real case-derived data,
-- temporal information,
-- spatial information in privacy-preserving form,
-- entity relationships,
-- network-ready representations,
-- suitable for graph analysis and pattern mining.
+`datasets/preprocessed/israel_lea_inp_burglary_offender_id_network.json`
 
-### Important limitation
+Verified artifact facts:
 
-It is not a raw multimedia corpus. The “multimedia” component therefore comes primarily from interactive visualization, animation, maps/heatmaps, timeline replay, charts, and optional audio guidance. Do not claim the dataset itself contains surveillance video unless the downloaded data actually does.
+- directed: true
+- multigraph: false
+- 17,237 offender nodes
+- 21,302 relation links
+- 24,087 unique crime IDs
+- 34,156 offender-crime association rows
+- observed dates: 2010-12-01 through 2020-09-28
+- normalized X/Y values in [0,1]
+- edge weights observed in [1,37]
 
-## Secondary candidate — Enron email communication network
+Full schema inspection:
+`docs/DATASET_SCHEMA_INSPECTION.md`
 
-Stanford SNAP provides an Enron email communication network derived from publicly released records. The network has 36,692 nodes and 183,831 edges and is useful for temporal/communication network methodology and pipeline testing.
+### Why selected
 
-Source:
-- https://snap.stanford.edu/data/email-Enron.html
+The artifact combines:
 
-Use this as a methodology/fallback dataset, not as direct evidence of criminal behavior.
+- anonymized entity IDs,
+- timestamps,
+- privacy-preserving spatial coordinates,
+- co-offending relations,
+- weighted network structure,
+- repeated events.
 
-## Secondary candidate — ROXANNE telephone communication examples
+This supports a genuinely non-trivial behavioral/network analysis pipeline within the one-month constraint.
 
-The same criminal-network visualization repository documents anonymized telephone communication datasets. Case 1 contains 33 phone calls; Case 2 covers communications among 124 individuals and identifies whether links are calls or SMS in the preprocessed network representation.
+### Multimedia limitation
 
-Source:
-- https://github.com/erichoang/criminal-network-visualization/blob/main/datasets/preprocessed/README.md
+This artifact does not contain raw video/audio. The Çoklu Ortam contribution will therefore be the interactive analytical presentation: dynamic graph, timeline, heatmap, animated state changes, event replay, synchronized views, and optional audio/narration.
 
-These are useful for demonstrating temporal communication-network analysis but should not be mislabeled as a complete criminal ground-truth dataset.
+### Secondary artifacts
 
-## Secondary candidate — Madoff fraud network
+The same upstream repository documents:
 
-The repository also documents a 61-node, 61-link network representing financial flows in the Madoff case.
+- `israel_lea_inp_burglary_v2_crime_id_network.json`
+- `israel_lea_case1_speakers.json`
+- `israel_lea_case2_speakers.json`
+- `nist_c1.json`
+- `nist_c2.json`
+- `madoff.json`
 
-Source:
-- https://github.com/erichoang/criminal-network-visualization/blob/main/datasets/preprocessed/README.md
+These remain secondary until a schema/value-add gate is passed.
 
-Useful for a small end-to-end demo and graph visualization.
+## Switching rule
 
-## Repository of alternatives
+Do not switch the primary dataset unless it fails a documented gate for:
 
-Network Repository provides thousands of real-world graph datasets, including social, dynamic, spatial, and time-series network data.
+1. accessibility,
+2. legal/usage terms,
+3. schema completeness,
+4. temporal availability,
+5. analytical relevance,
+6. computational feasibility,
+7. evaluation feasibility.
 
-Source:
-- https://networkrepository.com/network-data.php
-
-## Dataset selection gate
-
-Before implementation, the team must record:
-
-1. source URL,
-2. license/terms,
-3. exact download artifact,
-4. schema,
-5. ground-truth availability,
-6. temporal coverage,
-7. identifier semantics,
-8. missingness,
-9. privacy constraints,
-10. why the dataset matches the assignment.
-
-Do not download multiple large datasets and start coding blindly. Select one primary dataset first.
+Record every change in `docs/RESEARCH_LOG.md`.
