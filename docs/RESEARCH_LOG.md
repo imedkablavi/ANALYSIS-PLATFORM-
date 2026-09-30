@@ -47,6 +47,19 @@ One entry per meaningful research decision. Template at the end.
 
 ---
 
+
+### 2026-10-01 — Should the temporal baseline account for recurring calendar seasonality?
+- **Sources**: verified artifact coverage; project reference computation; existing rolling-baseline audit.
+- **Finding**: the causal 12-month rolling rule flagged July peaks that coincide with the busiest calendar month.
+- **Decision impact**: add a causal same-calendar-month robust baseline using up to five prior years and at least three prior observations; retain the rolling rule for comparison; make the production choice configurable.
+- **Confidence / limitation**: seasonality handling is improved conceptually, but the final MATLAB run must verify the observed flags and runtime behavior.
+
+### 2026-10-01 — How should synthetic anomalies be evaluated with Isolation Forest?
+- **Sources**: MathWorks Isolation Forest documentation; project synthetic-injection protocol.
+- **Finding**: fitting the forest on the same matrix after injecting anomalies contaminates the novelty-detection evaluation.
+- **Decision impact**: fit Isolation Forest on the clean reference matrix and score the separately injected matrix; keep the baseline anchored to the clean reference frame.
+- **Confidence / limitation**: methodological correction; execution and resulting metrics remain pending until MATLAB is run.
+
 ## Template
 
 ### YYYY-MM-DD — Question
