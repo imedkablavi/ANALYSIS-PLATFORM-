@@ -49,14 +49,7 @@ if mode == "rolling"
             continue;
         end
         [med(t), scale(t)] = robustCenterScale(ref);
-        if ~isnan(x(t))
-            % Do not let a zero/degenerate reference produce NaN surprises.
-            % robustCenterScale returns scale=1 for an all-constant reference.
-        end
-        if ~isnan(x(t))
-            % score below, after the shared reference construction
-        end
-        refYears(t) = string(t - (nRef(t) - 1)):string(t); %#ok<NBRAK>
+        refYears(t) = sprintf("previous %d bins", nRef(t));
     end
 else
     binStart = binStart(:);
