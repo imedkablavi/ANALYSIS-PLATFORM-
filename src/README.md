@@ -1,42 +1,23 @@
 # Source Tree
 
-The implementation is MATLAB-first and intentionally separated from the GUI.
+All analysis is MATLAB and independent of the GUI. Entry point: `pipeline/runAnalysisPipeline.m`.
 
-## Modules
+| Folder | Responsibility | Main functions |
+|---|---|---|
+| `data/` | ingestion, validation, reports, dataset hash | `loadBurglaryNetwork`, `flattenBurglaryEvents`, `validateBurglaryNetwork`, `writeValidationReport`, `verifyGitBlobSha` |
+| `preprocessing/` | canonical events, crimes, relations | `canonicalEvents`, `buildCrimeTable`, `buildRelationTable` |
+| `features/` | feature definitions and entity features | `featureRegistry`, `buildBehaviorFeatures`, `mergeFeatureTables` |
+| `graph/` | structural and dynamic network analysis | `buildOffenderGraph`, `computeGraphFeatures`, `computeCoreNumbers`, `buildGraphSnapshot`, `computeDynamicGraphStats` |
+| `temporal/` | system-level time series | `buildActivitySeries`, `detectTemporalAnomalies`, `detectChangePoints` |
+| `spatial/` | normalized-space density and space–time excess | `computeSpatialHotspots` |
+| `sequence/` | event tokens and sequence novelty | `sequenceAlphabet`, `encodeEventSequences`, `fitTransitionModel`, `scoreSequenceNovelty`, `mineSequenceNgrams` |
+| `pattern/` | recurring co-offending structures | `mineCooffendingPatterns` |
+| `anomaly/` | detectors and thresholds | `prepareFeatureMatrix`, `scoreRobustBaseline`, `scoreIsolationForest`, `applyReviewBudget`, `runAnomalyDetection` |
+| `explainability/` | evidence and attribution | `explainAnomalies` |
+| `evaluation/` | metrics and experiments | `rankAuc`, `averagePrecision`, `precisionAtK`, `topKJaccard`, `spearmanRho`, `tiedRanks`, `injectSyntheticAnomalies`, `runExperiments` |
+| `visualization/` | app/report support (pure + plotting) | `getEntityContext`, `entityEvidence`, `buildPlaybackFrame`, `plotActivityTimeline`, `plotEgoNetwork`, `plotSpatialView`, `plotEvidenceBars`, `plotScoreComparison` |
+| `pipeline/` | orchestration | `runAnalysisPipeline` |
+| `util/` | small shared helpers | `cfgGet`, `robustCenterScale`, `empiricalQuantile`, `joinStrings`, `writeTextFile` |
 
-- `data/`: JSON ingestion, flattening and validation.
-- `preprocessing/`: cleaning and normalization (next stage).
-- `features/`: entity-level behavioral features.
-- `behavior/`: baseline profile construction (next stage).
-- `temporal/`: time-aware behavioral analysis.
-- `spatial/`: normalized-coordinate analysis when supported.
-- `graph/`: graph construction and network features.
-- `sequence/`: event/interaction sequence analysis.
-- `anomaly/`: anomaly detectors.
-- `pattern/`: pattern discovery.
-- `explainability/`: evidence generation.
-- `evaluation/`: metrics and experiment runners.
-
-## Current implementation
-
-The first slice currently implements:
-
-```text
-JSON
- ↓
-loadBurglaryNetwork
- ↓
-flattenBurglaryEvents
- ↓
-validateBurglaryNetwork
- ↓
-buildOffenderGraph
- ↓
-computeGraphFeatures
- ↓
-buildBehaviorFeatures
- ↓
-mergeFeatureTables
- ↓
-outputs/experiments/
-```
+`behavior/` and `explainability/` naming follows docs/ARCHITECTURE.md; behavioural profiles are the
+feature table (docs/BEHAVIOR_MODEL.md).
