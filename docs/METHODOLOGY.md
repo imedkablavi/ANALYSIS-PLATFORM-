@@ -42,7 +42,7 @@ never 0.
   current or future month, so both are replay-safe. For **count** series (crimes, new offenders)
   the robust scale is floored at the Poisson SD √(baseline median): a scale estimated from only
   3–5 same-month values can fall far below counting noise (reference check on the real series:
-  ≈ 7 crimes for counts of ≈ 260, which produced three spurious flags; with the floor, none).
+  ≈ 7.4 crimes for monthly counts of ≈ 255–295, which produced three spurious flags; with the floor, none).
   The co-offending share uses the binomial analogue √(p(1−p)/n_crimes). Seasonal scoring starts in 2017
   (44 of 80 months scored).
 - **Level shifts**: penalized binary segmentation on the monthly count (penalty 2σ²·log n,

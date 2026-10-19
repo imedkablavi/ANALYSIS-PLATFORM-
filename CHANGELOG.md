@@ -16,6 +16,19 @@
   dynamic-graph windows end at the censored series end and carry a `partial` flag; activity series
   clipped to [t0, t1); app network shows all ties outside replay; E5–E7 reuse one forest per
   (feature set, repeat) instead of refitting it for every group and shift (~12× fewer fits).
+- Usability study kit for E10 (T-066): protocol docs/USABILITY_STUDY.md, bilingual consent form,
+  task sheet and SUS questionnaire (docs/usability/), CSV templates, `scoreSUS` and
+  `summarizeUsabilityLog` with hand-computed tests (tests/test_usability_scoring.m);
+  `outputs/usability/` git-ignored for raw participant data. No sessions run, no results.
+- Second code review (xhigh, runtime semantics): `sequenceAlphabet` used `meshgrid` on strings
+  (unsupported → pipeline would stop at the sequence stage); `error`/`warning` messages in the data
+  scripts were 1x2 string arrays; seasonal scoring no longer runs for non-monthly bins; replay hides
+  future ties instead of removing them (stable layout) with an exclusive cutoff; app timer survives
+  plot errors; empty-event guard in sequence encoding; single-seed E8 no longer crashes; E4 reuses
+  the stored full model; E8 min_events rows skip unused forests; one shared reference-median helper.
+- Technical report draft (T-063) in docs/report/ with results as explicit placeholders.
+- Documentation consistency: offenders-per-crime distribution corrected (sizes 10–12 had been
+  truncated), mean group size basis stated, clean-reference novelty training described everywhere.
 - MATLAB execution remains the final verification gate; no real runtime metrics are claimed yet.
 
 ## 0.2.0 — Audit and analytical core (2026-09-30)

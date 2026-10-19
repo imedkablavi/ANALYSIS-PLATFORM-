@@ -7,7 +7,7 @@
 | Signal Processing Toolbox | not used | change points are implemented transparently (`detectChangePoints`) instead of `findchangepts` |
 | Image Processing / Computer Vision | not used | no image data |
 | Audio Toolbox | not used | the optional cue uses base `sound` |
-| Parallel Computing Toolbox | not used | largest workload (~1,200 small forests in E5–E7) is minutes, not hours |
+| Parallel Computing Toolbox | not used | largest workload (~100 small forest fits + ~1,200 scorings in E5–E7) is minutes, not hours |
 
 The minimum release is inferred from the functions used; no specific release has been executed
 yet (docs/REPRODUCIBILITY.md §4).

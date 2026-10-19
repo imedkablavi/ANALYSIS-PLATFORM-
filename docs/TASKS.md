@@ -62,7 +62,7 @@ GitHub issue numbers in brackets (imedkablavi/ANALYSIS-PLATFORM-).
 | T-060 Evaluation scripts [#11] | 🔶 | E1–E9 implemented; synthetic IF evaluation uses clean-train novelty scoring |
 | T-061 Reproducibility run [#11] | ⏳ | first MATLAB execution remains the main gate |
 | T-062 Demo scenario [#12] | 🔶 | docs/DEMO_SCENARIO.md updated |
-| T-063 Technical report [#12] | ⏳ | METHODOLOGY + AUDIT provide the skeleton |
+| T-063 Technical report [#12] | 🔶 | draft in docs/report/; results pending MATLAB run |
 | T-064 Final presentation [#12] | ⏳ | |
 | T-065 Repository cleanup and release [#12] | ⏳ | |
-| T-066 Usability study (E10) | ⏳ | 5–8 participants, protocol in EVALUATION |
+| T-066 Usability study (E10) | 🔶 | kit ready; sessions not yet run — protocol docs/USABILITY_STUDY.md, forms docs/usability/, scoring `scoreSUS`/`summarizeUsabilityLog` |

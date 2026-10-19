@@ -10,7 +10,7 @@ Updated 2026-09-30 after the audit. Ordered by current severity.
 | R4 | Over-interpretation of scores/centrality as guilt or leadership | High | Medium | mandatory caveat in evidence text (tested); ethics doc; demo rules | mitigated |
 | R5 | Seasonality produces spurious "unusual months" | Medium | High (July peak) | documented; T-043 seasonal baseline | open |
 | R6 | No ground truth → weak evaluation claims | Medium | Certain | synthetic injection clearly labelled; stability; usability study; no accuracy claims | mitigated by design |
-| R7 | Synthetic grid (≈1,200 forests) too slow on a laptop | Medium | Low–Medium | `QUICK` mode; reduce repeats in config | open |
+| R7 | Synthetic grid too slow on a laptop | Medium | Low | forests cached per (set, repeat): ≈100 fits; `QUICK` mode | mitigated |
 | R8 | Upstream artifact changes | Medium | Low | blob-SHA check at download; version warning | mitigated |
 | R9 | Graph and co-offending features are not independent | Medium | Certain | stated in ablation reading guide; not presented as corroboration | mitigated |
 | R10 | Older MATLAB release lacks a function (< R2021b) | Medium | Low | requirement documented; baseline-only path without the toolbox | mitigated |

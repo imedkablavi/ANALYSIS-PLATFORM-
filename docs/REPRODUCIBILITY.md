@@ -67,9 +67,9 @@ docs/RESEARCH_LOG.md and in the relevant GitHub issue.
 1. `run scripts/run_tests.m` → expected: all fixture tests pass; `test_real_dataset` passes when
    the dataset is installed (its expected values come from the independent Python audit).
 2. `run scripts/run_pipeline.m` → expected: validation `is_valid = true`; warnings none;
-   info observations V14/V45/V46/V60/V61 as in docs/DATASET_SCHEMA_INSPECTION.md; 3,260 eligible.
+   info observations V45/V46/V60/V61 (V14 passes: every offender has ≥ 1 crime) as in docs/DATASET_SCHEMA_INSPECTION.md; 3,260 eligible.
 3. `run scripts/run_experiments.m` (first with `QUICK = true`) → check runtime; the full synthetic
-   grid fits about 1,200 small forests.
+   grid fits about 100 small forests and scores about 1,200 injected matrices.
 4. `run scripts/launch_app.m` → walk through docs/DEMO_SCENARIO.md.
 
 ## 5. Troubleshooting

@@ -41,5 +41,6 @@ not real-world accuracy.
 
 ## Runtime expectation
 
-The synthetic grid fits ≈ 6 groups × 2 shifts × 10 repeats × 10 sets ≈ 1,200 small Isolation Forest
+The synthetic grid fits one clean-reference forest per (feature set, repeat) ≈ 10 × 10 = 100 small
+Isolation Forests and scores ≈ 6 groups × 2 shifts × 10 repeats × 10 sets ≈ 1,200 injected matrices with them (formerly ≈ 1,200 fits) 
 runs. Use `QUICK = true` first.

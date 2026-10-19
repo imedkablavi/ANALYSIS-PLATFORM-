@@ -64,15 +64,16 @@ Scores are `NaN` for ineligible offenders.
 | Table | Columns |
 |---|---|
 | `temporal.series` | `bin_start, crimes, active_offenders, new_offenders, cooffending_share, mean_group_size` |
-| `temporal.*_anomalies` | `value, baseline_median, baseline_scale, robust_z, is_high, is_low` |
+| `temporal.*_anomalies` (+ `_rolling` / `_seasonal` variants; unsuffixed = configured method) | `value, baseline_median, baseline_scale, robust_z, is_high, is_low, baseline_count, baseline_years, floor_used` |
+| `temporal.anomaly_comparison` | `bin_start, rolling_flag, seasonal_flag` (seasonal column only with monthly bins) |
 | `temporal.change_points` | `index, mean_before, mean_after, cost_gain, bin_start` |
 | `spatial.cells` | `cell_row, cell_col, x_center, y_center, crimes` |
 | `spatial.spaceTime` | `cell_row, cell_col, year, crimes, expected, ratio, p_value, is_hotspot` |
-| `dynamicGraph` | `window_start, window_end, active_offenders, edges, new_edges, persistent_edges, edge_persistence, edge_jaccard, components, largest_component, mean_degree` |
+| `dynamicGraph` | `window_start, window_end, window_days, partial, active_offenders, edges, new_edges, persistent_edges, edge_persistence, edge_jaccard, components, largest_component, mean_degree` |
 | `patterns.pairs` | relations with weight ≥ 2 |
 | `patterns.groups` | `group_key` (sorted entity indices), `group_size, crimes, first_time, last_time` |
 | `patterns.ngrams` | `ngram, occurrences, support, is_frequent` |
-| `explanations.summary` | `entity_index, entity_id, iforest_*, baseline_*, dominant_group, evidence_text` |
+| `explanations.summary` | `entity_index, entity_id, iforest_score, iforest_rank, iforest_flag, baseline_score, baseline_rank, baseline_flag, dominant_group, evidence_text` |
 | `explanations.evidence` | `entity_index, feature, label, group, value, reference_median, robust_z, baseline_share, occlusion_delta, notable` |
 
 ## Rules

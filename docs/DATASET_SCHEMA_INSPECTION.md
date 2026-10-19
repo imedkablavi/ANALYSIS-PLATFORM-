@@ -57,7 +57,7 @@ Observed aggregate facts:
 - X range: **0–1**
 - Y range: **0–1**
 - num_of_offenders range: **1–13**
-- mean num_of_offenders: approximately **1.903**
+- mean num_of_offenders: approximately **1.903** over the 34,156 offender–crime rows (≈ **1.418** per unique crime)
 - median num_of_offenders: **1**
 
 The X/Y values are normalized coordinates. Do not interpret them as precise real-world map coordinates.
@@ -124,7 +124,7 @@ regression test `tests/test_real_dataset.m` checks the same values.
 | Busiest calendar month | July (2,374 crimes over all years) | seasonality; rolling baseline limitation |
 | Crimes per offender | min 1, median 1, mean 1.98, max 40; 11,446 with one crime | eligibility rule for anomaly scoring |
 | Offenders with ≥ 2 / ≥ 3 / ≥ 5 crimes | 5,791 / 3,260 / 1,395 | anomaly population = 3,260 |
-| Offenders per crime | 1: 17,402 · 2: 4,512 · 3: 1,390 · 4: 523 · 5: 170 · 6: 53 · 7: 19 · 8: 5 · 9: 9 · 13: 1 | |
+| Offenders per crime | 1: 17,402 · 2: 4,512 · 3: 1,390 · 4: 523 · 5: 170 · 6: 53 · 7: 19 · 8: 5 · 9: 9 · 10: 1 · 11: 1 · 12: 1 · 13: 1 (sum 24,087; corrected 2026-10-19 — the first listing was truncated and omitted 10–12) | |
 | Isolated offenders (no co-offender) | 7,597 | kept as isolated nodes |
 | Connected components / largest | 10,468 / 518 offenders | betweenness is cheap (fragmented graph) |
 | Maximum k-core; articulation points | 12; 1,156 | |
