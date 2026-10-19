@@ -4,7 +4,10 @@ function ds = importDataset(path, opts)
 %   DS = IMPORTDATASET(PATH) detects the format (inspectDatasetFile) and
 %   returns a struct the pipeline can analyse (see buildCanonicalDataset):
 %   nodes, links, events, graph, meta. OPTS (struct, optional):
-%     format        override the detected format
+%     format        override the detected format (skips detection for the
+%                   primary JSON, which avoids reading the large file twice)
+%     info          a result of inspectDatasetFile already computed by the
+%                   caller (skips a second inspection)
 %     mapping       column mapping struct (fields entity, event, time, x, y,
 %                   source, target, weight); missing fields fall back to
 %                   the detected mapping
@@ -28,11 +31,17 @@ arguments
     opts struct = struct()
 end
 
-info = inspectDatasetFile(path);
-fmt = optOr(opts, "format", info.format);
-mapping = mergeMapping(info.mapping, optOr(opts, "mapping", struct()));
+if isfield(opts, "info")
+    info = opts.info;
+elseif isfield(opts, "format") && string(opts.format) == "networkx_burglary_json"
+    info = struct('format', "networkx_burglary_json", 'mapping', struct(), 'message', "");
+else
+    info = inspectDatasetFile(path);
+end
+fmt = string(cfgGet(opts, "format", info.format));
+mapping = mergeMapping(info.mapping, cfgGet(opts, "mapping", struct()));
 [~, stem] = fileparts(path);
-name = string(optOr(opts, "name", stem));
+name = string(cfgGet(opts, "name", stem));
 if strlength(name) == 0
     name = string(stem);
 end
@@ -51,7 +60,7 @@ meta.import_notes = strings(0,1);
 switch fmt
     case "networkx_burglary_json"
         data = loadBurglaryNetwork(path);
-        events = flattenBurglaryEvents(data, string(optOr(opts, "date_format", "yyyy-MM-dd HH:mm:ss")));
+        events = flattenBurglaryEvents(data, string(cfgGet(opts, "date_format", "yyyy-MM-dd HH:mm:ss")));
         ds = rmfield(data, "rawNodes");
         ds.events = events;
         meta.n_rows = height(events);
@@ -65,11 +74,15 @@ switch fmt
         ds.meta = meta;
 
     case {"event_csv", "edge_csv"}
-        T = readDelimitedTable(path);
-        canon = struct('pseudonymize', optOr(opts, "pseudonymize", true), ...
-            'keep_id_map', optOr(opts, "keep_id_map", false));
-        timeUnit = string(optOr(opts, "time_unit", "auto"));
-        useEdges = mapping.source ~= "" && mapping.target ~= "";
+        % Identifier columns are read as text (never as double).
+        T = readDelimitedTable(path, [mapping.entity, mapping.event, mapping.source, mapping.target]);
+        canon = struct('pseudonymize', cfgGet(opts, "pseudonymize", true), ...
+            'keep_id_map', cfgGet(opts, "keep_id_map", false));
+        timeUnit = string(cfgGet(opts, "time_unit", "auto"));
+        % An explicitly requested format wins over column detection.
+        useEdges = fmt == "edge_csv" || (~isfield(opts, "format") && ...
+            mapping.source ~= "" && mapping.target ~= "");
+        meta.n_rows = height(T);
         if useEdges
             requireColumns(T, [mapping.source, mapping.target, mapping.time], ["source","target","time"]);
             h = height(T);
@@ -77,9 +90,10 @@ switch fmt
             dst = string(T.(mapping.target));
             [t, tNote] = parseTimeColumn(T.(mapping.time), timeUnit);
             evId = "e" + string((1:h)');
+            self = src == dst;            % self-interaction: one participant
             meta.format = "edge_csv";
             meta.import_notes(end+1,1) = "Each row is one interaction event with two participants; " + tNote + ".";
-            selfLoops = nnz(src == dst);
+            selfLoops = nnz(self);
             if selfLoops > 0
                 meta.import_notes(end+1,1) = sprintf("%d self-interactions (source = target) have a single participant.", selfLoops);
             end
@@ -87,7 +101,8 @@ switch fmt
                 meta.import_notes(end+1,1) = "Weight column '" + mapping.weight + ...
                     "' ignored: tie strength is derived from the number of shared events.";
             end
-            ds = buildCanonicalDataset([src; dst], [evId; evId], [t; t], [], [], meta, canon);
+            ds = buildCanonicalDataset([src; dst(~self)], [evId; evId(~self)], ...
+                [t; t(~self)], [], [], meta, canon);
         else
             requireColumns(T, [mapping.entity, mapping.time], ["entity","time"]);
             ent = string(T.(mapping.entity));
@@ -148,12 +163,4 @@ if isempty(s)
     s = 'dataset';
 end
 s = string(s(1:min(end, 40)));
-end
-
-function v = optOr(opts, name, default)
-if isfield(opts, name)
-    v = opts.(name);
-else
-    v = default;
-end
 end

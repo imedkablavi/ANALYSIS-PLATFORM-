@@ -29,15 +29,17 @@ re-analysing the same file replaces its entry instead of duplicating it.
 | `edge_csv` | one row per interaction between two entities | source, target, time | weight (ignored, see below) | SNAP temporal networks (`src dst unixtime`), message/e-mail logs |
 | `networkx_burglary_json` | the primary artifact's schema | — | — | primary dataset |
 
-Delimiters are detected automatically (comma, semicolon, tab, space); lines starting with `#`
-are ignored; headerless files with ≥ 3 columns are read as source, target, time. Column names
+Delimiters are detected automatically (comma, semicolon, tab, space); leading lines starting
+with `#` (SNAP comment header) are skipped, while a `#` inside a value (e.g. `OID#12`) is kept;
+identifier columns are always read as text, so long numeric IDs never lose precision; headerless files with ≥ 3 columns are read as source, target, time. Column names
 are matched case-insensitively against common names (e.g. `person/user/actor`,
 `event_id/case_id/incident_id`, `timestamp/date/time`, `lat/latitude`, `lon/longitude`); when
 a required column is not detected the app asks for it (or pass `opts.mapping`).
 
 Time columns may be datetimes, text dates (format inferred, then common formats tried) or
-numbers (POSIX seconds; > 1e11 → milliseconds; `time_unit` can force `posix_s`, `posix_ms`,
-`excel`, `datenum`). Unparseable times become NaT and are counted by validation (V43).
+numbers: integers 19000101–21001231 → `yyyymmdd`; ≥ 1e6 → POSIX seconds; > 1e11 → POSIX
+milliseconds; smaller values are ambiguous and raise `MOSAIC:AmbiguousTimeUnit` unless
+`time_unit` is set (`posix_s`, `posix_ms`, `excel`, `datenum`, `yyyymmdd`). Unparseable times become NaT and are counted by validation (V43).
 
 ## What happens on import (all recorded in `bundle.meta.dataset.import_notes`)
 

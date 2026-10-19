@@ -4,10 +4,17 @@ function [t, note] = parseTimeColumn(v, unit)
 %   [T, NOTE] = PARSETIMECOLUMN(V, UNIT) accepts what readtable returns for
 %   a time column:
 %     datetime         time zone is removed (all project dates are unzoned)
-%     numeric          UNIT "auto" (default): values > 1e11 are POSIX
-%                      milliseconds, otherwise POSIX seconds (the SNAP
-%                      temporal-network convention); or explicitly
-%                      "posix_s", "posix_ms", "excel", "datenum"
+%     numeric          UNIT "auto" (default):
+%                        all integers in 19000101..21001231 -> yyyyMMdd dates
+%                        max > 1e11 -> POSIX milliseconds
+%                        max >= 1e6 -> POSIX seconds (SNAP convention;
+%                                      relative offsets then start in 1970,
+%                                      only relative timing is meaningful)
+%                        otherwise  -> error: Excel serials, datenums and
+%                                      small offsets are indistinguishable,
+%                                      so UNIT must be given explicitly
+%                      or explicitly "posix_s", "posix_ms", "excel",
+%                      "datenum", "yyyymmdd"
 %     text             parsed with datetime's format inference; if that
 %                      fails, a list of common formats is tried
 %   Unparseable values become NaT; they are never dropped here, so the
@@ -16,7 +23,7 @@ function [t, note] = parseTimeColumn(v, unit)
 
 arguments
     v
-    unit (1,1) string {mustBeMember(unit, ["auto","posix_s","posix_ms","excel","datenum"])} = "auto"
+    unit (1,1) string {mustBeMember(unit, ["auto","posix_s","posix_ms","excel","datenum","yyyymmdd"])} = "auto"
 end
 
 if isdatetime(v)
@@ -29,10 +36,19 @@ end
 if isnumeric(v) || islogical(v)
     x = double(v(:));
     if unit == "auto"
-        if max(abs(x(isfinite(x))), [], 'omitnan') > 1e11
-            unit = "posix_ms";
-        else
+        f = x(isfinite(x));
+        if isempty(f)
             unit = "posix_s";
+        elseif all(f == round(f) & f >= 19000101 & f <= 21001231)
+            unit = "yyyymmdd";
+        elseif max(abs(f)) > 1e11
+            unit = "posix_ms";
+        elseif max(abs(f)) >= 1e6
+            unit = "posix_s";
+        else
+            error("MOSAIC:AmbiguousTimeUnit", ...
+                "Numeric times below 1e6 are ambiguous (Excel serial, datenum or small offsets). " + ...
+                "Set time_unit to ""excel"", ""datenum"" or ""posix_s"".");
         end
     end
     switch unit
@@ -44,6 +60,8 @@ if isnumeric(v) || islogical(v)
             t = datetime(x, 'ConvertFrom', 'excel');
         case "datenum"
             t = datetime(x, 'ConvertFrom', 'datenum');
+        case "yyyymmdd"
+            t = datetime(x, 'ConvertFrom', 'yyyymmdd');
     end
     t.TimeZone = '';
     note = "numeric time interpreted as " + unit;

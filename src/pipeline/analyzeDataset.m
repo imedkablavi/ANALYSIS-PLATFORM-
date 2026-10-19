@@ -38,21 +38,17 @@ end
 report(progress, 0.01, "inspecting file");
 
 info = inspectDatasetFile(path);
-mapping = info.mapping;
-if isfield(opts, "mapping")
-    fn = fieldnames(opts.mapping);
-    for k = 1:numel(fn)
-        mapping.(fn{k}) = string(opts.mapping.(fn{k}));
-    end
-elseif info.needs_mapping
-    error("MOSAIC:MappingMissing", "%s Pass opts.mapping.", info.message);
-end
 if info.format == "unknown"
     error("MOSAIC:UnsupportedFormat", "%s", info.message);
 end
+if info.needs_mapping && ~isfield(opts, "mapping")
+    error("MOSAIC:MappingMissing", "%s Pass opts.mapping.", info.message);
+end
 
-importOpts = struct('mapping', mapping);
-for f = ["name","time_unit","pseudonymize","keep_id_map"]
+% importDataset merges opts.mapping over the detected mapping and reuses
+% this inspection instead of reading the file again.
+importOpts = struct('info', info);
+for f = ["mapping","name","time_unit","pseudonymize","keep_id_map"]
     if isfield(opts, char(f))
         importOpts.(char(f)) = opts.(char(f));
     end

@@ -45,8 +45,7 @@ if ext == ".json"
 end
 
 try
-    opts = detectImportOptions(path, 'FileType', 'text', 'VariableNamingRule', 'preserve', ...
-        'CommentStyle', '#');
+    opts = textImportOptions(path);
 catch ME
     info.message = "Could not read the file as delimited text: " + ME.message;
     return;

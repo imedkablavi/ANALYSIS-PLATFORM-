@@ -56,21 +56,27 @@ entityRaw(ismissing(entityRaw)) = "";
 eventRaw(ismissing(eventRaw)) = "";
 entityRaw = strtrim(entityRaw);
 eventRaw = strtrim(eventRaw);
-noEvent = eventRaw == "";
-if any(noEvent)
-    eventRaw(noEvent) = "row" + string(find(noEvent));
-    notes(end+1,1) = sprintf("%d rows without an event id were treated as single-participant events.", nnz(noEvent));
-end
 drop = entityRaw == "";
 if any(drop)
     notes(end+1,1) = sprintf("%d rows without an entity id were dropped.", nnz(drop));
     entityRaw = entityRaw(~drop); eventRaw = eventRaw(~drop);
     t = t(~drop); x = x(~drop); y = y(~drop);
 end
+noEvent = eventRaw == "";
+if any(noEvent)
+    notes(end+1,1) = sprintf("%d rows without an event id were treated as single-participant events.", nnz(noEvent));
+end
 
 % --- Identifiers ----------------------------------------------------------------
 [uEnt, ~, entIdx] = unique(entityRaw, 'stable');
-[uEv, ~, evIdx] = unique(eventRaw, 'stable');
+% Rows without an event id get their own events in a separate index range,
+% so they can never merge with a real event id (no synthetic text ids).
+evIdx = zeros(numel(eventRaw), 1);
+[uEv, ~, evIdx(~noEvent)] = unique(eventRaw(~noEvent), 'stable');
+uEv = uEv(:);
+k = nnz(noEvent);
+evIdx(noEvent) = numel(uEv) + (1:k)';
+uEv = [uEv; "(no event id, row " + string(find(noEvent)) + ")"];
 if pseudo
     entityIds = "ENT" + compose("%06d", (1:numel(uEnt))');
     eventIds = "EV" + compose("%07d", (1:numel(uEv))');
@@ -110,24 +116,26 @@ nodes = table(entityIds, repmat("entity", numel(uEnt), 1), perEntity, perEntity,
     'VariableNames', {'entity_id','entity_type','crime_count','detail_count'});
 
 ds = struct();
-ds.sourceFile = string(getOr(meta, "source_file", ""));
+ds.sourceFile = string(cfgGet(meta, "source_file", ""));
 ds.directed = false;
 ds.multigraph = false;
-ds.graph = struct('name', string(getOr(meta, "name", "imported dataset")));
+ds.graph = struct('name', string(cfgGet(meta, "name", "imported dataset")));
 ds.nodes = nodes;
 ds.links = table(strings(0,1), strings(0,1), zeros(0,1), strings(0,1), false(0,1), ...
     'VariableNames', {'source_id','target_id','weight','link_type','observed'});
 ds.events = events;
 
 m = meta;
-m.n_rows = n;
+if ~isfield(m, "n_rows")
+    m.n_rows = n;          % source rows (edge lists: set by the importer)
+end
 m.n_entities = numel(uEnt);
 m.n_events = numel(uEv);
 m.has_coordinates = hasCoordinates;
 m.pseudonymized = pseudo;
 m.links_provided = false;
 m.expected_entity_type = "entity";
-m.import_notes = [reshape(string(getOr(meta, "import_notes", strings(0,1))), [], 1); notes];
+m.import_notes = [reshape(string(cfgGet(meta, "import_notes", strings(0,1))), [], 1); notes];
 ds.meta = m;
 if keepMap && pseudo
     ds.private.entity_map = table(entityIds, uEnt, 'VariableNames', {'entity_id','original_id'});
@@ -141,13 +149,5 @@ if hi > lo
     v = (v - lo) / (hi - lo);
 else
     v(:) = 0.5;
-end
-end
-
-function v = getOr(s, name, default)
-if isfield(s, name)
-    v = s.(name);
-else
-    v = default;
 end
 end

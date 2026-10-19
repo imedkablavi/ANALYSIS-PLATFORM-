@@ -97,6 +97,9 @@ verifyEqual(tc, ds.meta.n_events, 4);
 verifyEqual(tc, ds.meta.n_entities, 3);
 verifyFalse(tc, ds.meta.has_coordinates);
 verifyTrue(tc, any(contains(ds.meta.import_notes, "self-interactions")));
+verifyEqual(tc, ds.meta.n_rows, 4);                 % source rows, not participations
+verifyEqual(tc, height(ds.events), 7);              % 3 two-party rows + 1 self-interaction
+verifyEqual(tc, max(ds.events.num_offenders), 2);
 verifyEqual(tc, ds.events.event_time(1), datetime(2015,1,1));
 [rel, ~] = buildRelationTable(ds.events, ds.nodes.entity_id);
 % ties: 1-2 (two shared events), 2-3 (one)
@@ -114,6 +117,8 @@ verifyError(tc, @() importDataset(tc.TestData.eventCsv, struct('mapping', bad)),
 ds = importDataset(tc.TestData.eventCsv, struct('mapping', struct('event', ""), ...
     'pseudonymize', false));
 verifyEqual(tc, ds.meta.n_events, 9);               % no event column: one event per row
+verifyEqual(tc, ds.meta.n_rows, 10);
+verifyTrue(tc, all(ds.events.num_offenders == 1));
 verifyTrue(tc, any(ds.events.entity_id == "alice"));
 end
 
