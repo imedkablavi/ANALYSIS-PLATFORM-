@@ -84,3 +84,28 @@ docs/RESEARCH_LOG.md and in the relevant GitHub issue.
 | app shows "Analysis bundle not found" | pipeline not run | `run scripts/run_pipeline.m` |
 | slow app rendering | very large ego network | lower `cfg.app.max_graph_nodes` |
 | `verifyGitBlobSha` Java error | MATLAB started with `-nojvm` | start normally, or check with `git hash-object` |
+
+## 6. Continuous integration
+
+`.github/workflows/ci.yml` runs on every push (any branch), on pull requests and on manual
+dispatch (`workflow_dispatch`).
+
+| Job | What it does | Needs MATLAB |
+|---|---|---|
+| `lint` | `pip install miss_hit`, then `mh_lint .`; any MISS_HIT finding fails the job. | no |
+| `reference-audit` | Downloads the dataset with `curl` into `data/raw/` (cached with `actions/cache`, keyed by the blob SHA), fails unless `git hash-object` equals `cfg.data.expected_blob_sha`, runs `scripts/reference/audit_dataset_reference.py --graph` (NumPy + NetworkX) and asserts the exact printed lines `relations_from_crimes 10651 pair_crime_rows 15422`, `isolated_nodes 7597`, `components 10468 largest 518 max_core 12`, `articulation_points 1156`. | no |
+| `license-check` | Reports only whether the secret `MLM_LICENSE_TOKEN` exists (secrets cannot be used in a job-level `if`). | no |
+| `matlab-tests` | Only when the secret exists: restores and verifies the dataset, installs MATLAB R2023b + Statistics and Machine Learning Toolbox (`matlab-actions/setup-matlab@v3`), runs the `tests/` suite with `matlab-actions/run-tests@v3` (same tests as `scripts/run_tests.m`, including `test_real_dataset`), and uploads JUnit XML (`test-results/results.xml`) as the `matlab-test-results` artifact. | yes |
+
+**Enabling MATLAB tests.** This repository is private, so MathWorks' actions do not license
+MATLAB automatically. The owner must request a MATLAB batch licensing token (see the
+"Use MATLAB Batch Licensing Token" section of https://github.com/matlab-actions/setup-matlab
+and https://github.com/matlab-actions/run-tests) and add it as a repository secret named
+`MLM_LICENSE_TOKEN` (Settings → Secrets and variables → Actions). The release is pinned to R2023b
+(not `latest`) so CI results do not change silently when MathWorks ships a new release.
+
+**When the token is absent** the `matlab-tests` job is skipped, the workflow still passes, and
+the run shows a notice and job-summary entry "MATLAB tests were SKIPPED … No MATLAB results were
+produced by this run." A green CI run without that job having executed is **not** evidence
+that the MATLAB code works; section 4 remains pending until MATLAB tests actually run. CI never
+commits the dataset or uploads pipeline outputs (which contain pseudonymous `OID#` identifiers).
