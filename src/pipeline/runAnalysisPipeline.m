@@ -10,6 +10,12 @@ function bundle = runAnalysisPipeline(cfg, rootDir, opts)
 %     use_iforest    default: true when iforest is available
 %     save           default true
 %     data_file      override the input path (tests use a small fixture)
+%     dataset        an already imported dataset (importDataset); takes
+%                    precedence over data_file. Used by analyzeDataset for
+%                    any external dataset (docs/DATASET_IMPORT.md)
+%     progress       function handle @(fraction, message) called at every
+%                    stage (fraction in [0,1]); used by the app's progress
+%                    dialog
 %
 %   Stage order mirrors the architecture (docs/ARCHITECTURE.md):
 %   load -> flatten -> validate -> crimes/relations -> graph -> behaviour
@@ -34,19 +40,26 @@ if isfield(opts, "data_file")
     dataFile = opts.data_file;
 end
 
+progressFcn = [];
+if isfield(opts, "progress") && ~isempty(opts.progress)
+    progressFcn = opts.progress;
+end
+stageNo = 0;
+
 timings = struct();
 clk = tic;
-logStage("load");
-data = loadBurglaryNetwork(dataFile);
-timings.load = toc(clk);
+stageNo = logStage(stageNo, progressFcn, "import");
+if isfield(opts, "dataset")
+    data = opts.dataset;
+else
+    data = importDataset(dataFile, struct('format', "networkx_burglary_json", ...
+        'date_format', cfgGet(cfg, "data.date_format", "yyyy-MM-dd HH:mm:ss")));
+end
+events = data.events;
+timings.import = toc(clk);
 
 clk = tic;
-logStage("flatten");
-events = flattenBurglaryEvents(data, cfgGet(cfg, "data.date_format", "yyyy-MM-dd HH:mm:ss"));
-timings.flatten = toc(clk);
-
-clk = tic;
-logStage("validate");
+stageNo = logStage(stageNo, progressFcn, "validate");
 validation = validateBurglaryNetwork(data, events, cfg);
 reportDir = fullfile(rootDir, cfg.output.report_dir);
 if doSave
@@ -62,27 +75,31 @@ entityIds = data.nodes.entity_id;
 nEnt = numel(entityIds);
 entityTypes = data.nodes.entity_type;
 graphMeta = data.graph;
-clear data   % drop decoded JSON (largest object) as early as possible
+datasetMeta = struct();
+if isfield(data, "meta")
+    datasetMeta = data.meta;
+end
+clear data   % drop the imported dataset as early as possible
 
 clk = tic;
-logStage("crimes and relations");
+stageNo = logStage(stageNo, progressFcn, "crimes and relations");
 crimes = buildCrimeTable(events);
 [relations, pairEvents] = buildRelationTable(events, entityIds);
 timings.relations = toc(clk);
 
 clk = tic;
-logStage("graph features");
+stageNo = logStage(stageNo, progressFcn, "graph features");
 G = buildOffenderGraph(relations, entityIds);
 graphFeatures = computeGraphFeatures(G);
 timings.graph = toc(clk);
 
 clk = tic;
-logStage("behaviour features");
+stageNo = logStage(stageNo, progressFcn, "behaviour features");
 behavior = buildBehaviorFeatures(events, entityIds, relations, cfg);
 timings.behavior = toc(clk);
 
 clk = tic;
-logStage("sequences");
+stageNo = logStage(stageNo, progressFcn, "sequences");
 [tokens, stepThreshold] = encodeEventSequences(events, pairEvents, cfg);
 seqModel = fitTransitionModel(tokens, cfgGet(cfg, "sequence.laplace_alpha", 1));
 [seqFeatures, tokens] = scoreSequenceNovelty(tokens, seqModel, nEnt);
@@ -93,7 +110,7 @@ timings.sequence = toc(clk);
 features = mergeFeatureTables(behavior, graphFeatures, seqFeatures);
 
 clk = tic;
-logStage("temporal analysis");
+stageNo = logStage(stageNo, progressFcn, "temporal analysis");
 t0 = cfg.temporal.series_start;
 t1 = cfg.temporal.series_end;
 series = buildActivitySeries(events, crimes, t0, t1, cfg.temporal.bin);
@@ -155,14 +172,14 @@ end
 timings.temporal = toc(clk);
 
 clk = tic;
-logStage("spatial analysis");
+stageNo = logStage(stageNo, progressFcn, "spatial analysis");
 years = cfg.temporal.snapshot_years(:);
 spatial = computeSpatialHotspots(crimes, cfg.spatial.grid_size, years, cfg.spatial.hotspot_alpha);
 spatial.step_threshold = stepThreshold;
 timings.spatial = toc(clk);
 
 clk = tic;
-logStage("dynamic graph");
+stageNo = logStage(stageNo, progressFcn, "dynamic graph");
 % Yearly windows, but the last one is cut at series_end: data after it are
 % incomplete and right-censored (solved cases). Shortened windows are
 % flagged as partial in the output.
@@ -172,20 +189,20 @@ dynamicGraph = computeDynamicGraphStats(pairEvents, events, windowStarts);
 timings.dynamic_graph = toc(clk);
 
 clk = tic;
-logStage("pattern mining");
+stageNo = logStage(stageNo, progressFcn, "pattern mining");
 patterns = mineCooffendingPatterns(events, relations, 2);
 patterns.ngrams = ngrams;
 timings.patterns = toc(clk);
 
 clk = tic;
-logStage("anomaly detection");
+stageNo = logStage(stageNo, progressFcn, "anomaly detection");
 registry = featureRegistry();
 anomaly = runAnomalyDetection(features, registry, cfg, ...
     cfg.anomaly.feature_groups, struct('use_iforest', useIF));
 timings.anomaly = toc(clk);
 
 clk = tic;
-logStage("explanations");
+stageNo = logStage(stageNo, progressFcn, "explanations");
 explanations = explainAnomalies(anomaly, features, cfg);
 timings.explain = toc(clk);
 
@@ -201,14 +218,31 @@ entities.iforest_score = anomaly.iforest.score;
 entities.iforest_rank = anomaly.iforest.rank;
 entities.iforest_flag = anomaly.iforest.flag;
 
+datasetSha = cfg.data.expected_blob_sha;
+if isfield(datasetMeta, "sha")
+    datasetSha = datasetMeta.sha;
+end
+if isfield(datasetMeta, "source_file")
+    dataFile = datasetMeta.source_file;
+end
+if ~isfield(datasetMeta, "has_coordinates")
+    datasetMeta.has_coordinates = true;
+end
+configNotes = strings(0,1);
+if isfield(opts, "config_notes")
+    configNotes = reshape(string(opts.config_notes), [], 1);
+end
 bundle = struct();
 bundle.meta = struct( ...
     'project', cfg.project.name, 'version', cfg.project.version, ...
     'feature_version', cfg.project.feature_version, ...
-    'dataset_file', dataFile, 'dataset_blob_sha', cfg.data.expected_blob_sha, ...
+    'dataset_file', dataFile, 'dataset_blob_sha', datasetSha, ...
     'graph', graphMeta, 'created', datetime('now'), ...
     'matlab_version', version, 'iforest_used', useIF, ...
     'random_seed', cfg.analysis.random_seed, 'timings', timings);
+% Dataset provenance (import format, mapping, notes, adapted configuration)
+bundle.meta.dataset = datasetMeta;
+bundle.meta.config_notes = configNotes;
 bundle.config = cfg;
 bundle.validation = validation;
 bundle.entities = entities;
@@ -228,7 +262,7 @@ bundle.explanations = explanations;
 
 if doSave
     clk = tic;
-    logStage("save");
+    stageNo = logStage(stageNo, progressFcn, "save");
     bundleFile = fullfile(rootDir, cfg.output.bundle_file);
     if ~isfolder(fileparts(bundleFile))
         mkdir(fileparts(bundleFile));
@@ -250,12 +284,36 @@ if doSave
         fullfile(expDir, "temporal_anomaly_method_comparison.csv"));
     bundle.meta.timings.save = toc(clk);
     writeTextFile(fullfile(expDir, "pipeline_run.json"), jsonencode(struct( ...
-        'meta', rmfield(bundle.meta, {'graph','created'}), ...
+        'meta', rmfield(bundle.meta, {'graph','created','dataset'}), ...
+        'dataset', datasetSummary(datasetMeta), ...
         'created', char(bundle.meta.created, 'yyyy-MM-dd''T''HH:mm:ss'), ...
         'n_entities', nEnt, 'n_eligible', nnz(anomaly.eligible), ...
         'n_features', numel(anomaly.prep.names), ...
         'dropped_features', {cellstr(anomaly.prep.dropped)}, ...
         'agreement', anomaly.agreement)));
+end
+end
+
+function out = datasetSummary(m)
+% JSON-safe dataset provenance for pipeline_run.json (no datetimes, no IDs).
+out = struct();
+for f = ["id","name","format","sha","n_rows","n_entities","n_events", ...
+        "has_coordinates","pseudonymized","links_provided"]
+    if isfield(m, char(f))
+        out.(char(f)) = m.(char(f));
+    end
+end
+if isfield(m, "import_notes")
+    out.import_notes = cellstr(reshape(string(m.import_notes), 1, []));
+end
+end
+
+function stageNo = logStage(stageNo, progressFcn, name)
+% Console log + optional progress callback (fraction of the 13 stages).
+stageNo = stageNo + 1;
+fprintf("[pipeline] %s ...\n", name);
+if ~isempty(progressFcn)
+    progressFcn(min(stageNo / 13, 1), name);
 end
 end
 
@@ -270,6 +328,3 @@ r = detectTemporalAnomalies(x, t.baseline_window, t.min_baseline_bins, ...
     t.seasonal_min_samples, floorKind, trials);
 end
 
-function logStage(name)
-fprintf("[pipeline] %s ...\n", name);
-end

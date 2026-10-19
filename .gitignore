@@ -9,6 +9,8 @@ codegen/
 
 # Local datasets / potentially restricted files
 data/raw/*
+data/external/*
+!data/external/README.md
 data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
@@ -20,6 +22,8 @@ outputs/experiments/*
 outputs/reports/*
 # Usability-study raw data (E10): participant logs and SUS answers stay local
 outputs/usability/*
+# Imported datasets: bundles, tables, catalog and pseudonym maps stay local
+outputs/datasets/*
 
 # Python
 __pycache__/

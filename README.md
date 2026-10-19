@@ -34,6 +34,16 @@ run scripts/generate_report_figures.m % report figures
 run scripts/launch_app.m              % interactive multimedia application
 ```
 
+## Analyse your own dataset
+
+The platform is not limited to the primary artifact. Any dataset recording *who took part in
+which event and when* — an event CSV or a temporal edge list such as SNAP's `src dst unixtime` —
+can be analysed end to end: `scripts/analyze_dataset.m` or the app's **Open dataset…** button.
+Identifiers are pseudonymized and coordinates scaled on import. Details:
+[docs/DATASET_IMPORT.md](docs/DATASET_IMPORT.md).
+
+Items that need the project owner's input are collected in [TASKS_FOR_ADMIN.md](TASKS_FOR_ADMIN.md).
+
 ## Pipeline
 
 ```text

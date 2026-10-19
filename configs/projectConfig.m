@@ -80,6 +80,10 @@ cfg.evaluation.sensitivity.num_obs = [64 128 256 512];
 cfg.evaluation.sensitivity.min_events = [2 3 5];
 cfg.evaluation.sensitivity.budget = [0.005 0.01 0.02 0.05];
 
+% --- Wording of generated evidence texts (imported datasets: entities/events)
+cfg.labels.entities = "offenders";
+cfg.labels.events = "crimes";
+
 % --- Output ---------------------------------------------------------------
 cfg.output.bundle_file = fullfile("outputs","model","analysis_bundle.mat");
 cfg.output.report_dir = fullfile("outputs","reports");

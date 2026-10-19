@@ -29,6 +29,13 @@
 - Technical report draft (T-063) in docs/report/ with results as explicit placeholders.
 - Documentation consistency: offenders-per-crime distribution corrected (sizes 10–12 had been
   truncated), mean group size basis stated, clean-reference novelty training described everywhere.
+- External dataset import (T-067): `inspectDatasetFile`, `importDataset` (event CSV, temporal
+  edge list incl. headerless SNAP files, primary JSON), `buildCanonicalDataset` (pseudonymized IDs,
+  min-max scaled coordinates, documented import notes), `configureForDataset` (time windows/bins
+  derived from the data), `analyzeDataset` + dataset catalog (`registerDataset`, `listDatasets`),
+  `scripts/analyze_dataset.m`; validation marks link/coordinate checks "not applicable" for such
+  data; evidence wording uses entity/event nouns. `outputs/datasets/` and `data/external/` git-ignored.
+- TASKS_FOR_ADMIN.md: every item that needs the owner's data, permissions or decisions.
 - MATLAB execution remains the final verification gate; no real runtime metrics are claimed yet.
 
 ## 0.2.0 — Audit and analytical core (2026-09-30)

@@ -22,6 +22,13 @@ data/raw/*.json ──verifyGitBlobSha
    └─► src/visualization  getEntityContext · entityEvidence · buildPlaybackFrame · plot*  ──►  app/NetworkBehaviorExplorer.m
 ```
 
+## Dataset import layer
+
+`inspectDatasetFile → importDataset → configureForDataset → runAnalysisPipeline →
+registerDataset` (wrapped by `analyzeDataset`). Every supported format is converted to the
+same dataset contract (nodes, links, events, meta), so the pipeline has a single code path.
+See docs/DATASET_IMPORT.md.
+
 ## Shared analytical model (the bundle)
 
 One struct connects every layer: **Entity → Events → Behaviour → Relationships → Time → Patterns →

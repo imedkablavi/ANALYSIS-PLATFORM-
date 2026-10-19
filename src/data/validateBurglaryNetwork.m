@@ -50,9 +50,13 @@ C = add(C, "V10", "nodes", "error", ~any(emptyId), sum(emptyId), ...
 [~, firstIdx] = unique(nodeIds, 'stable');
 dupNodes = nN - numel(firstIdx);
 C = add(C, "V11", "nodes", "error", dupNodes == 0, dupNodes, "Entity IDs are unique.");
-badType = nodes.entity_type ~= "offender";
+expectedType = "offender";
+if isfield(data, "meta") && isfield(data.meta, "expected_entity_type")
+    expectedType = string(data.meta.expected_entity_type);
+end
+badType = nodes.entity_type ~= expectedType;
 C = add(C, "V12", "nodes", "warning", ~any(badType), sum(badType), ...
-    "All nodes have type 'offender' (the only type in the verified artifact).");
+    sprintf("All nodes have the expected entity type '%s'.", expectedType));
 cidMismatch = nodes.crime_count ~= nodes.detail_count;
 C = add(C, "V13", "nodes", "warning", ~any(cidMismatch), sum(cidMismatch), ...
     "list_cid length equals the number of crime_details entries per node.");
@@ -218,6 +222,23 @@ checks.category = string(checks.category);
 checks.severity = string(checks.severity);
 checks.message = string(checks.message);
 
+% Imported datasets (docs/DATASET_IMPORT.md) may have no explicit links
+% (relations are derived from shared events) or no coordinates. The
+% corresponding checks are then not applicable: recorded as passed "info"
+% rows with an explicit note instead of failing or disappearing.
+linksProvided = ~(isfield(data, "meta") && isfield(data.meta, "links_provided") ...
+    && ~data.meta.links_provided);
+if ~linksProvided
+    na = ismember(checks.check_id, ["V02","V20","V21","V22","V23","V24","V25", ...
+        "V26","V27","V28","V29","V30","V31","V52","V53","V54"]);
+    checks = markNotApplicable(checks, na, ...
+        "dataset has no explicit links; relations are derived from shared events");
+end
+if nE > 0 && all(isnan(events.x) | isnan(events.y))
+    checks = markNotApplicable(checks, ismember(checks.check_id, ["V47","V48"]), ...
+        "dataset has no coordinates; spatial analysis is disabled");
+end
+
 report = struct();
 report.checks = checks;
 failed = ~checks.passed;
@@ -232,6 +253,7 @@ s.undirected_relation_count = height(relations);
 s.event_count = nE;
 s.unique_crime_count = height(crimes);
 s.isolated_node_count = sum(isolated);
+s.links_provided = linksProvided;
 s.symmetric_links = all(reciprocal(valid));
 s.weight_equals_shared_crimes = wMismatch == 0 && relWithoutLink == 0 && linkWithoutShared == 0;
 s.day_resolution_only = ~any(tod);
@@ -253,6 +275,13 @@ report.event_count = nE;
 report.unique_crime_count = height(crimes);
 report.date_min = s.date_min;
 report.date_max = s.date_max;
+end
+
+function checks = markNotApplicable(checks, mask, reason)
+checks.severity(mask) = "info";
+checks.passed(mask) = true;
+checks.affected(mask) = 0;
+checks.message(mask) = "Not applicable (" + reason + "): " + checks.message(mask);
 end
 
 function C = add(C, id, category, severity, passed, affected, message)

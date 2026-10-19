@@ -65,4 +65,5 @@ GitHub issue numbers in brackets (imedkablavi/ANALYSIS-PLATFORM-).
 | T-063 Technical report [#12] | 🔶 | draft in docs/report/; results pending MATLAB run |
 | T-064 Final presentation [#12] | ⏳ | |
 | T-065 Repository cleanup and release [#12] | ⏳ | |
+| T-067 External dataset import (event CSV, temporal edge list) | 🔶 | `analyzeDataset`, catalog, app "Open dataset…"; docs/DATASET_IMPORT.md |
 | T-066 Usability study (E10) | 🔶 | kit ready; sessions not yet run — protocol docs/USABILITY_STUDY.md, forms docs/usability/, scoring `scoreSUS`/`summarizeUsabilityLog` |

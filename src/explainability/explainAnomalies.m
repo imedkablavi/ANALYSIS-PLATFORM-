@@ -105,6 +105,8 @@ groupsTbl = table(repelem(chosen, G, 1), repmat(groupsU', K, 1), ...
 dominant = strings(K, 1);
 text = strings(K, 1);
 nElig = numel(eligIdx);
+nouns = struct('entities', string(cfgGet(cfg, "labels.entities", "offenders")), ...
+    'events', string(cfgGet(cfg, "labels.events", "crimes")));
 for i = 1:K
     if hasIF && all(~isnan(occG(i,:)))
         [~, gi] = max(occG(i,:));
@@ -114,7 +116,7 @@ for i = 1:K
     if G > 0
         dominant(i) = groupsU(gi);
     end
-    text(i) = composeText(i, chosen(i), res, prep, raw, refMedian, Zc, occ, ...
+    text(i) = composeText(i, chosen(i), res, prep, raw, refMedian, Zc, occ, nouns, ...
         hasIF, dominant(i), zThr, nElig);
 end
 
@@ -129,7 +131,7 @@ ex.groups = groupsTbl;
 ex.z_threshold = zThr;
 end
 
-function t = composeText(i, e, res, prep, raw, refMedian, Zc, occ, hasIF, dom, zThr, nElig)
+function t = composeText(i, e, res, prep, raw, refMedian, Zc, occ, nouns, hasIF, dom, zThr, nElig)
 parts = strings(0,1);
 if hasIF
     parts(end+1) = sprintf("Isolation Forest rank %d of %d (score %.3f; review threshold %.3f).", ...
@@ -167,8 +169,9 @@ else
     parts(end+1) = "Main evidence: " + joinStrings(lines, "; ") + ".";
 end
 parts(end+1) = "Dominant feature group: " + dom + ".";
-parts(end+1) = "Interpretation: a statistical deviation from the reference population of offenders with >= " + ...
-    res.settings.min_events + " recorded crimes; it is not evidence of guilt, intent or dangerousness.";
+parts(end+1) = "Interpretation: a statistical deviation from the reference population of " + ...
+    nouns.entities + " with >= " + res.settings.min_events + " recorded " + nouns.events + ...
+    "; it is not evidence of guilt, intent or dangerousness.";
 t = joinStrings(parts, " ");
 end
 
