@@ -38,6 +38,9 @@ cfg.temporal.baseline_window = 12;     % causal rolling window (bins)
 cfg.temporal.min_baseline_bins = 6;    % bins required before rolling scoring
 cfg.temporal.seasonal_lookback_years = 5;
 cfg.temporal.seasonal_min_samples = 3; % prior same-month observations required
+% Count series (crimes, new offenders): scale >= sqrt(baseline), the Poisson
+% SD; tiny seasonal reference sets otherwise under-estimate noise.
+cfg.temporal.poisson_scale_floor = true;
 cfg.temporal.robust_z_threshold = 3.5; % Iglewicz & Hoaglin (1993)
 cfg.temporal.burst_window_days = 30;
 cfg.temporal.changepoint_min_segment = 6;

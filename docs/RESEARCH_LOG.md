@@ -60,6 +60,18 @@ One entry per meaningful research decision. Template at the end.
 - **Decision impact**: fit Isolation Forest on the clean reference matrix and score the separately injected matrix; keep the baseline anchored to the clean reference frame.
 - **Confidence / limitation**: methodological correction; execution and resulting metrics remain pending until MATLAB is run.
 
+### 2026-10-19 — Is the seasonal robust scale reliable with 3–5 reference values?
+- **Sources**: real monthly crime series (artifact `3afe9cbb…`), Python port of `detectTemporalAnomalies`.
+- **Finding**: the seasonal MAD scale was ≈ 7.4 crimes for monthly counts of ≈ 255–295, below the
+  Poisson counting SD (≈ 16). Three months (2018-09, 2019-05, 2019-12) reached |z| ≥ 3.5 on
+  ordinary fluctuation. With scale ≥ √(baseline median), none are flagged.
+- **Decision impact**: Poisson scale floor for count series (crimes, new offenders), configurable
+  via `cfg.temporal.poisson_scale_floor`; not applied to the co-offending share. Regression test
+  `testPoissonScaleFloorForCounts`. The seasonal regression test now distinguishes "unscored"
+  (July 2016, 2 references) from "scored as normal" (July 2018, z = 0).
+- **Confidence / limitation**: high for the arithmetic (reference port); the floor assumes
+  roughly Poisson-or-wider monthly variation, which overdispersed crime counts satisfy.
+
 ## Template
 
 ### YYYY-MM-DD — Question

@@ -39,13 +39,18 @@ never 0.
   baseline: compare a month only with earlier observations of that same month, using up to five
   prior years and requiring at least three prior samples. |z| ≥ 3.5 is the evidence threshold.
   The original causal 12-month rolling rule is retained as a comparison. Neither rule uses the
-  current or future month, so both are replay-safe.
+  current or future month, so both are replay-safe. For **count** series (crimes, new offenders)
+  the robust scale is floored at the Poisson SD √(baseline median): a scale estimated from only
+  3–5 same-month values can fall far below counting noise (reference check on the real series:
+  ≈ 7 crimes for counts of ≈ 260, which produced three spurious flags; with the floor, none).
+  The co-offending share is a proportion and is not floored. Seasonal scoring starts in 2017
+  (44 of 80 months scored).
 - **Level shifts**: penalized binary segmentation on the monthly count (penalty 2σ²·log n,
   σ from first differences; Truong et al. 2020), minimum segment 6 months, at most 5 changes.
 - **Entity rhythm**: inter-event gap statistics, burstiness B = (σ−μ)/(σ+μ) (Goh & Barabási 2008),
   dormancy ratio, busiest-30-day share.
-- **Known limitation**: the rolling baseline has no seasonal term; July is the busiest month
-  overall, so summer peaks may be flagged as unusual (open task T-043).
+- **Known limitation**: the rolling comparison baseline has no seasonal term (July is the busiest
+  month overall), and the seasonal baseline cannot score 2014–2016.
 
 ## 5. Spatial analysis
 

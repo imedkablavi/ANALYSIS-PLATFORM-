@@ -1,4 +1,4 @@
-function result = detectTemporalAnomalies(x, window, minBins, zThreshold, mode, binStart, seasonalLookbackYears, seasonalMinSamples)
+function result = detectTemporalAnomalies(x, window, minBins, zThreshold, mode, binStart, seasonalLookbackYears, seasonalMinSamples, poissonFloor)
 %DETECTTEMPORALANOMALIES Causal rolling or seasonal robust z-scores.
 %
 %   RESULT = DETECTTEMPORALANOMALIES(X, WINDOW, MINBINS, ZTHRESHOLD)
@@ -14,8 +14,16 @@ function result = detectTemporalAnomalies(x, window, minBins, zThreshold, mode, 
 %   explicit fallbacks). Seasonal mode is a transparent seasonal-naive
 %   baseline; it requires BINSTART and enough prior same-month observations.
 %
+%   POISSONFLOOR (default false) is for COUNT series only: the scale is
+%   raised to at least sqrt(max(baseline median, 1)), the Poisson standard
+%   deviation. A robust scale estimated from a handful of reference values
+%   (seasonal mode uses 3-5 same-month values) can fall far below ordinary
+%   counting noise; on the real monthly crime series the unfloored seasonal
+%   scale was ~7 crimes for counts of ~260 (Poisson SD ~16), which turns
+%   normal fluctuation into |z| > 3.5. Do not use it for shares/ratios.
+%
 %   RESULT fields: value, baseline_median, baseline_scale, robust_z,
-%   is_high, is_low, baseline_count, baseline_years.
+%   is_high, is_low, baseline_count, baseline_years, poisson_floor_used.
 
 arguments
     x (:,1) double
@@ -26,6 +34,7 @@ arguments
     binStart (:,1) datetime = datetime.empty(0,1)
     seasonalLookbackYears (1,1) double {mustBeInteger, mustBePositive} = 5
     seasonalMinSamples (1,1) double {mustBeInteger, mustBePositive} = 3
+    poissonFloor (1,1) logical = false
 end
 
 if numel(x) ~= numel(binStart) && mode == "seasonal_same_month"
@@ -67,12 +76,20 @@ else
             continue;
         end
         [med(t), scale(t)] = robustCenterScale(ref);
-        refYears(t) = strjoin(string(yy(refMask)), ",");
+        refYears(t) = joinStrings(string(yy(refMask)), ",");
     end
+end
+
+floorUsed = false(n,1);
+if poissonFloor
+    poissonSd = sqrt(max(med, 1));
+    floorUsed = ~isnan(scale) & scale < poissonSd;
+    scale(floorUsed) = poissonSd(floorUsed);
 end
 
 z = (x - med) ./ scale;
 result = table(x, med, scale, z, z >= zThreshold, z <= -zThreshold, ...
-    nRef, refYears, 'VariableNames', {'value','baseline_median', ...
-    'baseline_scale','robust_z','is_high','is_low','baseline_count','baseline_years'});
+    nRef, refYears, floorUsed, 'VariableNames', {'value','baseline_median', ...
+    'baseline_scale','robust_z','is_high','is_low','baseline_count', ...
+    'baseline_years','poisson_floor_used'});
 end

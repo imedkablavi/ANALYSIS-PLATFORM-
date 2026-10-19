@@ -41,7 +41,13 @@ crime), persistent ties, edge persistence, Jaccard, components, largest componen
 ## Limitations and next steps
 
 - The seasonal baseline needs at least three prior observations of the same calendar month before
-  it can score a bin; early years therefore have NaN temporal anomaly scores.
+  it can score a bin; 2014–2016 are therefore unscored (NaN), i.e. 44 of 80 months are scored.
+  NaN means "insufficient history", never "normal".
+- Small reference sets give unstable robust scales. Count series therefore use a Poisson floor,
+  scale ≥ √(baseline median) (`cfg.temporal.poisson_scale_floor`). Reference computation on the
+  real series (Python port, 2026-10-19): without the floor the seasonal rule flags 2018-09
+  (z 6.3, scale 7.4 crimes), 2019-05 (z 4.6) and 2019-12 (z −3.9); with the floor it flags none.
+  To be confirmed by the MATLAB run (`temporal_anomaly_method_comparison.csv`).
 - The data are solved cases, so temporal peaks can still reflect case-solving and reporting
   processes rather than the underlying event process.
 - Monthly counts of solved cases mix offending and police solving activity.

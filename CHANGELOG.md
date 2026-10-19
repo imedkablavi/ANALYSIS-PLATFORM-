@@ -7,6 +7,9 @@
 - Production temporal mode now defaults to the seasonal same-month baseline; the rolling rule remains available for comparison.
 - Added seasonality regression coverage and made the configured baseline label visible in the timeline.
 - Stabilized ego-network anomaly color scaling globally so colors remain comparable across entity selections.
+- Added a Poisson scale floor (scale ≥ √baseline) for count series: the seasonal baseline's 3–5
+  reference values under-estimated counting noise and flagged three ordinary months on the real data.
+- Seasonal regression test now separates "unscored" from "scored as normal"; new floor test.
 - MATLAB execution remains the final verification gate; no real runtime metrics are claimed yet.
 
 ## 0.2.0 — Audit and analytical core (2026-09-30)

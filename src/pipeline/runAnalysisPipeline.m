@@ -99,26 +99,14 @@ t1 = cfg.temporal.series_end;
 series = buildActivitySeries(events, crimes, t0, t1, cfg.temporal.bin);
 temporal.series = series;
 temporal.anomaly_method = cfg.temporal.anomaly_method;
-temporal.crime_anomalies_rolling = detectTemporalAnomalies(series.crimes, ...
-    cfg.temporal.baseline_window, cfg.temporal.min_baseline_bins, cfg.temporal.robust_z_threshold);
-temporal.crime_anomalies_seasonal = detectTemporalAnomalies(series.crimes, ...
-    cfg.temporal.baseline_window, cfg.temporal.min_baseline_bins, cfg.temporal.robust_z_threshold, ...
-    "seasonal_same_month", series.bin_start, cfg.temporal.seasonal_lookback_years, ...
-    cfg.temporal.seasonal_min_samples);
-
-temporal.new_offender_anomalies_rolling = detectTemporalAnomalies(series.new_offenders, ...
-    cfg.temporal.baseline_window, cfg.temporal.min_baseline_bins, cfg.temporal.robust_z_threshold);
-temporal.new_offender_anomalies_seasonal = detectTemporalAnomalies(series.new_offenders, ...
-    cfg.temporal.baseline_window, cfg.temporal.min_baseline_bins, cfg.temporal.robust_z_threshold, ...
-    "seasonal_same_month", series.bin_start, cfg.temporal.seasonal_lookback_years, ...
-    cfg.temporal.seasonal_min_samples);
-
-temporal.cooffending_anomalies_rolling = detectTemporalAnomalies(series.cooffending_share, ...
-    cfg.temporal.baseline_window, cfg.temporal.min_baseline_bins, cfg.temporal.robust_z_threshold);
-temporal.cooffending_anomalies_seasonal = detectTemporalAnomalies(series.cooffending_share, ...
-    cfg.temporal.baseline_window, cfg.temporal.min_baseline_bins, cfg.temporal.robust_z_threshold, ...
-    "seasonal_same_month", series.bin_start, cfg.temporal.seasonal_lookback_years, ...
-    cfg.temporal.seasonal_min_samples);
+% Count series get the Poisson scale floor; the co-offending share does not
+% (it is a proportion, not a count).
+temporal.crime_anomalies_rolling = scoreSeries(series.crimes, "rolling", series.bin_start, cfg, true);
+temporal.crime_anomalies_seasonal = scoreSeries(series.crimes, "seasonal_same_month", series.bin_start, cfg, true);
+temporal.new_offender_anomalies_rolling = scoreSeries(series.new_offenders, "rolling", series.bin_start, cfg, true);
+temporal.new_offender_anomalies_seasonal = scoreSeries(series.new_offenders, "seasonal_same_month", series.bin_start, cfg, true);
+temporal.cooffending_anomalies_rolling = scoreSeries(series.cooffending_share, "rolling", series.bin_start, cfg, false);
+temporal.cooffending_anomalies_seasonal = scoreSeries(series.cooffending_share, "seasonal_same_month", series.bin_start, cfg, false);
 
 switch cfg.temporal.anomaly_method
     case "rolling"
@@ -244,6 +232,14 @@ if doSave
         'dropped_features', {cellstr(anomaly.prep.dropped)}, ...
         'agreement', anomaly.agreement)));
 end
+end
+
+function r = scoreSeries(x, mode, binStart, cfg, isCount)
+% One temporal-anomaly call with every parameter taken from the configuration.
+t = cfg.temporal;
+r = detectTemporalAnomalies(x, t.baseline_window, t.min_baseline_bins, ...
+    t.robust_z_threshold, mode, binStart, t.seasonal_lookback_years, ...
+    t.seasonal_min_samples, isCount && cfgGet(cfg, "temporal.poisson_scale_floor", true));
 end
 
 function logStage(name)
