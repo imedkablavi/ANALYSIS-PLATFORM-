@@ -18,6 +18,8 @@ models/*.mat
 models/*.onnx
 outputs/experiments/*
 outputs/reports/*
+# Usability-study raw data (E10): participant logs and SUS answers stay local
+outputs/usability/*
 
 # Python
 __pycache__/

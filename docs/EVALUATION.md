@@ -23,7 +23,9 @@ claims about real offenders are possible.
 2. Choose 1 % of rows at random (seeded).
 3. For one feature group, move each feature 3 or 5 robust SD further from the median in the
    direction it already deviates (random sign when z = 0).
-4. Re-fit/score each detector on the contaminated matrix (as in real use) for every feature set.
+4. For every feature set, fit Isolation Forest on the CLEAN reference matrix and score the
+   contaminated matrix (novelty detection; injected rows never enter training). The robust
+   baseline stays in the clean reference frame. Forests are cached per (feature set, repeat).
 5. Repeat 10 times; report mean and SD.
 
 Limits: injected deviations are axis-aligned and group-coherent; real unusual behaviour need not
@@ -44,6 +46,9 @@ SYNTHETIC (file prefix `synthetic_`).
 
 Plus SUS questionnaire (10 items) and one open question. Report model performance and usability
 separately.
+
+Full protocol, scoring rubric, forms and scoring code: docs/USABILITY_STUDY.md
+(forms in docs/usability/; `scoreSUS`, `summarizeUsabilityLog`). Sessions not yet run.
 
 ## Reporting principle
 
