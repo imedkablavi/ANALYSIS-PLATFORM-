@@ -13,6 +13,7 @@ function alphabet = sequenceAlphabet()
 
 states = ["S","R","N"];
 moves = ["0","L","F","U"];
-[m, s] = meshgrid(moves, states);
-alphabet = reshape(s + m, [], 1);
+% Implicit expansion (3x1 + 1x4) instead of meshgrid, which is not defined
+% for string arrays. Column-major order: S0,R0,N0,SL,RL,NL,SF,...
+alphabet = reshape(states' + moves, [], 1);
 end

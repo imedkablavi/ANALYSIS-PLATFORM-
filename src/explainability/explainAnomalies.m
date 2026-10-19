@@ -78,11 +78,7 @@ end
 
 % --- Raw values and reference medians in original units -------------------------
 raw = features{chosen, cellstr(prep.names)};
-refMedian = prep.center;
-reg = featureRegistry();
-[~, regRow] = ismember(prep.names, reg.name);
-isLog = reg.transform(regRow)' == "log1p";
-refMedian(isLog) = expm1(refMedian(isLog));
+refMedian = referenceMedians(prep, featureRegistry());
 
 % --- Long evidence table ------------------------------------------------------------
 eIdx = repelem(chosen, p, 1);

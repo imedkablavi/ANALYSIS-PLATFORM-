@@ -89,7 +89,11 @@ abl = table('Size', [numel(sets) 6], 'VariableTypes', ["string","double","double
     'baseline_spearman_vs_full','iforest_topk_jaccard_vs_full','iforest_spearman_vs_full'});
 k = res0.agreement.k;
 for s = 1:numel(sets)
-    r = runAnomalyDetection(feat, registry, cfg, sets{s}, struct('use_iforest', useIF));
+    if isequal(sort(sets{s}), sort(string(cfg.anomaly.feature_groups)))
+        r = res0;   % the full model is already in the bundle; no refit
+    else
+        r = runAnomalyDetection(feat, registry, cfg, sets{s}, struct('use_iforest', useIF));
+    end
     abl.feature_set(s) = strjoin(sets{s}, "+");
     abl.n_features(s) = numel(r.prep.names);
     abl.baseline_topk_jaccard_vs_full(s) = topKJaccard(r.baseline.score, res0.baseline.score, k);
@@ -126,7 +130,8 @@ for tg = targets
                 if ~any(cols)
                     continue;
                 end
-                bs = sqrt(mean(Zi(:, cols).^2, 2));
+                bres = scoreRobustBaseline(Zi(:, cols));   % same detector as E2/E4
+                bs = bres.score;
                 rows(end+1, :) = {tg, sh, rep, strjoin(sets{s}, "+"), "baseline", ...
                     rankAuc(bs, lab), averagePrecision(bs, lab), precisionAtK(bs, lab, m)}; %#ok<AGROW>
                 if useIF
@@ -185,6 +190,9 @@ if useIF
             jac(end+1) = topKJaccard(S(:,i), S(:,j), k); %#ok<AGROW>
         end
     end
+    if isempty(jac)                 % fewer than two seeds: no pairs to compare
+        jac = NaN;
+    end
     sens(end+1, :) = {"seed", "pairwise over seeds", mean(jac), min(jac), NaN};
     for v1 = cfg.evaluation.sensitivity.num_learners
         s1 = scoreIsolationForest(Zf, Zf, v1, no, seed);
@@ -197,7 +205,7 @@ if useIF
 end
 for me = cfg.evaluation.sensitivity.min_events
     r = runAnomalyDetection(feat, registry, cfg, cfg.anomaly.feature_groups, ...
-        struct('min_events', me, 'use_iforest', useIF));
+        struct('min_events', me, 'use_iforest', false));   % only baseline flags are compared
     common = r.eligible & res0.eligible;
     a = r.baseline.flag & common;
     b = res0.baseline.flag & common;
@@ -231,7 +239,7 @@ md(end+1,1) = "";
 md(end+1,1) = "## E9 Runtime (seconds) and memory";
 md = [md; tableToMarkdown(perf)];
 
-% ---------------- temporal findings (supports E5 on real data) ----------------------------
+% ---------------- real system-level temporal findings (context; not part of synthetic E5) --
 ta = bundle.temporal;
 flaggedMonths = ta.series.bin_start(ta.crime_anomalies.is_high | ta.crime_anomalies.is_low);
 md(end+1,1) = "";

@@ -16,11 +16,7 @@ ev = table(strings(0,1), strings(0,1), strings(0,1), zeros(0,1), zeros(0,1), ...
 if isempty(row)
     return;
 end
-reg = bundle.registry;
-[~, regRow] = ismember(prep.names, reg.name);
-ref = prep.center;
-isLog = reg.transform(regRow)' == "log1p";
-ref(isLog) = expm1(ref(isLog));
+ref = referenceMedians(prep, bundle.registry);
 values = bundle.entities{entityIndex, cellstr(prep.names)};
 occ = NaN(1, numel(prep.names));
 E = bundle.explanations.evidence;

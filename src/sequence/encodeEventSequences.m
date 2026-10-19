@@ -25,6 +25,15 @@ end
 q = cfgGet(cfg, "spatial.local_move_quantile", 0.5);
 ev = canonicalEvents(events);
 E = height(ev);
+if E == 0
+    tokens = ev;
+    tokens.group_state = strings(0,1);
+    tokens.step_distance = zeros(0,1);
+    tokens.move = strings(0,1);
+    tokens.token = strings(0,1);
+    stepThreshold = NaN;
+    return;
+end
 
 % --- spatial move -----------------------------------------------------------
 sameEntity = [false; diff(ev.entity_index) == 0];

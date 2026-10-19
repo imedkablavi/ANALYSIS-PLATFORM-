@@ -5,8 +5,11 @@ function info = plotEgoNetwork(ax, bundle, entityIndex, hops, maxNodes, cutoffTi
 %   draws the entities within HOPS co-offending steps (unweighted BFS),
 %   capped at MAXNODES (closest first). Node colour = Isolation Forest
 %   score (grey = not scored), size = number of crimes, edge width = shared
-%   crimes, selected entity outlined in red. With CUTOFFTIME, edges whose
-%   first shared crime is later are hidden (temporal playback).
+%   crimes, selected entity outlined in red. With CUTOFFTIME (exclusive
+%   window end, as in buildPlaybackFrame), ties whose first shared crime is
+%   on or after it are hidden (temporal playback). They are hidden, not
+%   removed, so the layout is computed on the same graph in every frame and
+%   nodes do not jump during replay.
 %   INFO.nodes maps plotted node k to entity index INFO.nodes(k);
 %   INFO.plot is the GraphPlot handle (for click selection).
 
@@ -24,8 +27,9 @@ cand = cand(1:min(maxNodes, numel(cand)));
 % whether subgraph keeps or sorts the requested order.
 cand = sort(cand(:));
 H = subgraph(G, cand);
+future = false(numedges(H), 1);
 if ~isnat(cutoffTime) && numedges(H) > 0
-    H = rmedge(H, find(H.Edges.FirstTime > cutoffTime));
+    future = H.Edges.FirstTime >= cutoffTime;
 end
 
 cla(ax);
@@ -36,6 +40,10 @@ else
 end
 p = plot(ax, H, 'Layout', 'force', 'NodeLabel', {}, 'EdgeAlpha', 0.5, ...
     'LineWidth', lw, 'EdgeColor', [0.5 0.5 0.5]);
+if any(future)
+    [fs, ft] = findedge(H, find(future));
+    highlight(p, fs, ft, 'LineStyle', 'none');
+end
 score = bundle.entities.iforest_score(cand);
 if all(isnan(score))
     score = bundle.entities.baseline_score(cand);
@@ -80,7 +88,7 @@ cb = colorbar(ax);
 cb.Label.String = 'Anomaly score (grey = not scored, red = selected)';
 axis(ax, 'off');
 ttl = sprintf('Co-offending network within %d hops (%d offenders, %d ties)', ...
-    hops, numnodes(H), numedges(H));
+    hops, numnodes(H), nnz(~future));
 if ~isnat(cutoffTime)
     ttl = sprintf('%s — ties formed before %s', ttl, string(cutoffTime, 'yyyy-MM'));
 end

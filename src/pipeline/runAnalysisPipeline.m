@@ -106,7 +106,17 @@ cntFloor = "none"; shareFloor = "none";
 if floorOn
     cntFloor = "poisson"; shareFloor = "binomial";
 end
-for m = ["rolling", "seasonal_same_month"]
+% The seasonal comparison needs monthly bins; with other bins only the
+% rolling rule is computed (and selecting seasonal is a configuration error).
+modes = "rolling";
+if cfg.temporal.bin == "month"
+    modes(end+1) = "seasonal_same_month";
+elseif cfg.temporal.anomaly_method == "seasonal_same_month"
+    error("MOSAIC:TemporalAnomalyMethod", ...
+        "anomaly_method ""seasonal_same_month"" requires cfg.temporal.bin = ""month"" (got ""%s"").", ...
+        cfg.temporal.bin);
+end
+for m = modes
     sfx = "_" + extractBefore(m + "_", "_");      % "_rolling" / "_seasonal"
     temporal.("crime_anomalies" + sfx) = scoreSeries(series.crimes, m, series.bin_start, cfg, cntFloor, []);
     temporal.("new_offender_anomalies" + sfx) = scoreSeries(series.new_offenders, m, series.bin_start, cfg, cntFloor, []);
@@ -127,10 +137,16 @@ switch cfg.temporal.anomaly_method
             "Unsupported temporal anomaly method: %s", cfg.temporal.anomaly_method);
 end
 
-temporal.anomaly_comparison = table(series.bin_start, ...
-    temporal.crime_anomalies_rolling.is_high | temporal.crime_anomalies_rolling.is_low, ...
-    temporal.crime_anomalies_seasonal.is_high | temporal.crime_anomalies_seasonal.is_low, ...
-    'VariableNames', {'bin_start','rolling_flag','seasonal_flag'});
+if isfield(temporal, "crime_anomalies_seasonal")
+    temporal.anomaly_comparison = table(series.bin_start, ...
+        temporal.crime_anomalies_rolling.is_high | temporal.crime_anomalies_rolling.is_low, ...
+        temporal.crime_anomalies_seasonal.is_high | temporal.crime_anomalies_seasonal.is_low, ...
+        'VariableNames', {'bin_start','rolling_flag','seasonal_flag'});
+else
+    temporal.anomaly_comparison = table(series.bin_start, ...
+        temporal.crime_anomalies_rolling.is_high | temporal.crime_anomalies_rolling.is_low, ...
+        'VariableNames', {'bin_start','rolling_flag'});
+end
 temporal.change_points = detectChangePoints(series.crimes, ...
     cfg.temporal.changepoint_min_segment, cfg.temporal.changepoint_max_changes);
 if height(temporal.change_points) > 0

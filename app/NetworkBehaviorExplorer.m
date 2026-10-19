@@ -143,9 +143,17 @@ classdef NetworkBehaviorExplorer < handle
             plotActivityTimeline(app.TimeAxes, b, app.Selected, tEnd);
             plotSpatialView(app.MapAxes, b, app.Selected, frame.t0, frame.t1);
             if ~isempty(app.Selected)
-                app.NetInfo = plotEgoNetwork(app.NetAxes, b, app.Selected, 2, ...
-                    b.config.app.max_graph_nodes, app.networkCutoff());
-                app.NetInfo.plot.ButtonDownFcn = @(~, evt) app.onGraphClick(evt);
+                % Runs inside the Play timer: an error here must not kill the
+                % timer while the button still says "Pause".
+                try
+                    app.NetInfo = plotEgoNetwork(app.NetAxes, b, app.Selected, 2, ...
+                        b.config.app.max_graph_nodes, app.networkCutoff());
+                    app.NetInfo.plot.ButtonDownFcn = @(~, evt) app.onGraphClick(evt);
+                catch ME
+                    app.stopTimer();
+                    app.PlayButton.Text = 'Play';
+                    app.showMessage(app.NetAxes, "Network view unavailable: " + ME.message);
+                end
             end
             drawnow limitrate;
         end
