@@ -33,7 +33,11 @@ yyaxis right
 plot(year(dg.window_start), dg.edge_persistence, '-o', 'LineWidth', 1.5);
 ylabel('Edge persistence vs previous year');
 legend({'active ties','new ties','persistence'}, 'Location', 'northwest');
-title('Dynamic co-offending network by year');
+ttl = 'Dynamic co-offending network by year';
+if any(dg.partial)
+    ttl = sprintf('%s (partial windows: %s)', ttl, strjoin(string(year(dg.window_start(dg.partial)))', ', '));
+end
+title(ttl);
 exportgraphics(f, fullfile(outDir, "fig_dynamic_graph.png"), 'Resolution', 200);
 
 deg = b.entities.degree;

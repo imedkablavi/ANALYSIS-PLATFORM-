@@ -1,4 +1,4 @@
-function result = detectTemporalAnomalies(x, window, minBins, zThreshold, mode, binStart, seasonalLookbackYears, seasonalMinSamples, poissonFloor)
+function result = detectTemporalAnomalies(x, window, minBins, zThreshold, mode, binStart, seasonalLookbackYears, seasonalMinSamples, scaleFloor, trials)
 %DETECTTEMPORALANOMALIES Causal rolling or seasonal robust z-scores.
 %
 %   RESULT = DETECTTEMPORALANOMALIES(X, WINDOW, MINBINS, ZTHRESHOLD)
@@ -14,16 +14,23 @@ function result = detectTemporalAnomalies(x, window, minBins, zThreshold, mode, 
 %   explicit fallbacks). Seasonal mode is a transparent seasonal-naive
 %   baseline; it requires BINSTART and enough prior same-month observations.
 %
-%   POISSONFLOOR (default false) is for COUNT series only: the scale is
-%   raised to at least sqrt(max(baseline median, 1)), the Poisson standard
-%   deviation. A robust scale estimated from a handful of reference values
-%   (seasonal mode uses 3-5 same-month values) can fall far below ordinary
-%   counting noise; on the real monthly crime series the unfloored seasonal
-%   scale was ~7 crimes for counts of ~260 (Poisson SD ~16), which turns
-%   normal fluctuation into |z| > 3.5. Do not use it for shares/ratios.
+%   SCALEFLOOR (default "none") sets a minimum scale from sampling noise:
+%     "poisson"   count series: scale >= sqrt(max(baseline median, 1))
+%     "binomial"  proportion series: scale >= sqrt(p(1-p)/n_t), with p the
+%                 baseline median and n_t = TRIALS(t), the bin's denominator
+%                 (e.g. number of crimes for the co-offending share)
+%   A robust scale estimated from a handful of reference values (seasonal
+%   mode uses 3-5 same-month values) can fall far below ordinary sampling
+%   noise; on the real monthly crime series the unfloored seasonal scale was
+%   ~7 crimes for counts of ~260 (Poisson SD ~16), which turns normal
+%   fluctuation into |z| > 3.5.
+%
+%   Seasonal mode requires monthly bins (one bin per calendar month and
+%   year); weekly bins would compare a week with other weeks of the same
+%   month in the SAME earlier year, which is not a seasonal baseline.
 %
 %   RESULT fields: value, baseline_median, baseline_scale, robust_z,
-%   is_high, is_low, baseline_count, baseline_years, poisson_floor_used.
+%   is_high, is_low, baseline_count, baseline_years, floor_used.
 
 arguments
     x (:,1) double
@@ -34,7 +41,8 @@ arguments
     binStart (:,1) datetime = datetime.empty(0,1)
     seasonalLookbackYears (1,1) double {mustBeInteger, mustBePositive} = 5
     seasonalMinSamples (1,1) double {mustBeInteger, mustBePositive} = 3
-    poissonFloor (1,1) logical = false
+    scaleFloor (1,1) string {mustBeMember(scaleFloor,["none","poisson","binomial"])} = "none"
+    trials (:,1) double = double.empty(0,1)
 end
 
 if numel(x) ~= numel(binStart) && mode == "seasonal_same_month"
@@ -44,6 +52,17 @@ end
 
 x = x(:);
 n = numel(x);
+if mode == "seasonal_same_month" && n > 0
+    ym = year(binStart(:)) * 12 + month(binStart(:));
+    ym = ym(~isnan(ym));
+    if numel(unique(ym)) ~= numel(ym)
+        error("MOSAIC:SeasonalNeedsMonthlyBins", ...
+            "Seasonal same-month mode requires one bin per calendar month (got several bins in one month).");
+    end
+end
+if scaleFloor == "binomial" && numel(trials) ~= n
+    error("MOSAIC:TemporalLengthMismatch", "TRIALS must have one value per bin for the binomial floor.");
+end
 med = NaN(n,1);
 scale = NaN(n,1);
 nRef = zeros(n,1);
@@ -80,16 +99,21 @@ else
     end
 end
 
-floorUsed = false(n,1);
-if poissonFloor
-    poissonSd = sqrt(max(med, 1));
-    floorUsed = ~isnan(scale) & scale < poissonSd;
-    scale(floorUsed) = poissonSd(floorUsed);
+floorSd = NaN(n,1);
+switch scaleFloor
+    case "poisson"
+        floorSd = sqrt(max(med, 1));
+    case "binomial"
+        p = min(max(med, 0), 1);
+        ok = trials(:) > 0;
+        floorSd(ok) = sqrt(p(ok) .* (1 - p(ok)) ./ trials(ok));
 end
+floorUsed = ~isnan(scale) & ~isnan(floorSd) & scale < floorSd;
+scale(floorUsed) = floorSd(floorUsed);
 
 z = (x - med) ./ scale;
 result = table(x, med, scale, z, z >= zThreshold, z <= -zThreshold, ...
     nRef, refYears, floorUsed, 'VariableNames', {'value','baseline_median', ...
     'baseline_scale','robust_z','is_high','is_low','baseline_count', ...
-    'baseline_years','poisson_floor_used'});
+    'baseline_years','floor_used'});
 end

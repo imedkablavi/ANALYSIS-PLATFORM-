@@ -92,4 +92,10 @@ verifyEqual(tc, st.new_edges', [4 1 0]);
 verifyEqual(tc, st.persistent_edges', [0 3 0]);
 verifyEqual(tc, st.edge_persistence(2), 3/4);
 verifyEqual(tc, st.largest_component', [3 4 0]);
+verifyFalse(tc, any(st.partial));                 % 28-31 day months are all full
+% A last window cut short (e.g. at the censored series end) is flagged.
+st2 = computeDynamicGraphStats(pe, tc.TestData.events, ...
+    datetime([2015 2016 2016], [1 1 7], 1)');
+verifyEqual(tc, st2.partial', [false true]);
+verifyEqual(tc, st2.window_days', [365 182]);
 end

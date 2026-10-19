@@ -114,6 +114,7 @@ if quick
     shifts = shifts(end);
 end
 rows = {};
+forestCache = cell(numel(sets), reps);
 for tg = targets
     for sh = shifts
         for rep = 1:reps
@@ -132,7 +133,11 @@ for tg = targets
                     % Novelty-detection evaluation: fit on the clean reference
                     % population and score the contaminated synthetic sample.
                     % This prevents injected anomalies from contaminating training.
-                    is = scoreIsolationForest(Z(:, cols), Zi(:, cols), nl, no, seed + rep);
+                    % The forest is cached per (feature set, repeat): it does not depend on the injected group/shift.
+                    if isempty(forestCache{s, rep})
+                        [~, forestCache{s, rep}] = scoreIsolationForest(Z(:, cols), Z(:, cols), nl, no, seed + rep);
+                    end
+                    [~, is] = isanomaly(forestCache{s, rep}, Zi(:, cols));
                     rows(end+1, :) = {tg, sh, rep, strjoin(sets{s}, "+"), "iforest", ...
                         rankAuc(is, lab), averagePrecision(is, lab), precisionAtK(is, lab, m)}; %#ok<AGROW>
                 end

@@ -10,6 +10,12 @@
 - Added a Poisson scale floor (scale ≥ √baseline) for count series: the seasonal baseline's 3–5
   reference values under-estimated counting noise and flagged three ordinary months on the real data.
 - Seasonal regression test now separates "unscored" from "scored as normal"; new floor test.
+- Code review (2026-10-19) fixes: timeline title built with `char + char` (numeric addition → crash
+  of the timeline, app and report figures); rolling-baseline label now reflects the configured
+  window; seasonal mode rejects non-monthly bins; binomial noise floor for the co-offending share;
+  dynamic-graph windows end at the censored series end and carry a `partial` flag; activity series
+  clipped to [t0, t1); app network shows all ties outside replay; E5–E7 reuse one forest per
+  (feature set, repeat) instead of refitting it for every group and shift (~12× fewer fits).
 - MATLAB execution remains the final verification gate; no real runtime metrics are claimed yet.
 
 ## 0.2.0 — Audit and analytical core (2026-09-30)

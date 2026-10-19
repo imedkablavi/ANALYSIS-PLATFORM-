@@ -8,6 +8,10 @@ function stats = computeDynamicGraphStats(pairEvents, events, windowStarts)
 %
 %   One row per window:
 %     window_start, window_end
+%     window_days         window length in days
+%     partial             true when the window is shorter than the first one
+%                         (e.g. the last year cut at the series end); counts
+%                         in a partial window are not comparable to full ones
 %     active_offenders    offenders with >= 1 crime in the window
 %     edges               co-offending pairs active in the window
 %     new_edges           pairs whose first-ever shared crime is in the window
@@ -70,6 +74,8 @@ end
 stats = array2table(vars, 'VariableNames', {'active_offenders','edges', ...
     'new_edges','persistent_edges','edge_persistence','edge_jaccard', ...
     'components','largest_component','mean_degree'});
-stats = addvars(stats, windowStarts(1:nW), windowStarts(2:nW+1), ...
-    'Before', 1, 'NewVariableNames', {'window_start','window_end'});
+winDays = days(windowStarts(2:nW+1) - windowStarts(1:nW));
+partial = winDays < max(winDays) - 3;   % tolerance covers 365 vs 366 days
+stats = addvars(stats, windowStarts(1:nW), windowStarts(2:nW+1), winDays, partial, ...
+    'Before', 1, 'NewVariableNames', {'window_start','window_end','window_days','partial'});
 end

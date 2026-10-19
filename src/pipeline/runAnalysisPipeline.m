@@ -99,14 +99,19 @@ t1 = cfg.temporal.series_end;
 series = buildActivitySeries(events, crimes, t0, t1, cfg.temporal.bin);
 temporal.series = series;
 temporal.anomaly_method = cfg.temporal.anomaly_method;
-% Count series get the Poisson scale floor; the co-offending share does not
-% (it is a proportion, not a count).
-temporal.crime_anomalies_rolling = scoreSeries(series.crimes, "rolling", series.bin_start, cfg, true);
-temporal.crime_anomalies_seasonal = scoreSeries(series.crimes, "seasonal_same_month", series.bin_start, cfg, true);
-temporal.new_offender_anomalies_rolling = scoreSeries(series.new_offenders, "rolling", series.bin_start, cfg, true);
-temporal.new_offender_anomalies_seasonal = scoreSeries(series.new_offenders, "seasonal_same_month", series.bin_start, cfg, true);
-temporal.cooffending_anomalies_rolling = scoreSeries(series.cooffending_share, "rolling", series.bin_start, cfg, false);
-temporal.cooffending_anomalies_seasonal = scoreSeries(series.cooffending_share, "seasonal_same_month", series.bin_start, cfg, false);
+% Sampling-noise floors: Poisson for counts, binomial for the co-offending
+% share (denominator = crimes in the bin). See detectTemporalAnomalies.
+floorOn = cfgGet(cfg, "temporal.sampling_noise_floor", true);
+cntFloor = "none"; shareFloor = "none";
+if floorOn
+    cntFloor = "poisson"; shareFloor = "binomial";
+end
+for m = ["rolling", "seasonal_same_month"]
+    sfx = "_" + extractBefore(m + "_", "_");      % "_rolling" / "_seasonal"
+    temporal.("crime_anomalies" + sfx) = scoreSeries(series.crimes, m, series.bin_start, cfg, cntFloor, []);
+    temporal.("new_offender_anomalies" + sfx) = scoreSeries(series.new_offenders, m, series.bin_start, cfg, cntFloor, []);
+    temporal.("cooffending_anomalies" + sfx) = scoreSeries(series.cooffending_share, m, series.bin_start, cfg, shareFloor, series.crimes);
+end
 
 switch cfg.temporal.anomaly_method
     case "rolling"
@@ -142,7 +147,11 @@ timings.spatial = toc(clk);
 
 clk = tic;
 logStage("dynamic graph");
+% Yearly windows, but the last one is cut at series_end: data after it are
+% incomplete and right-censored (solved cases). Shortened windows are
+% flagged as partial in the output.
 windowStarts = datetime([years; years(end)+1], 1, 1);
+windowStarts(end) = min(windowStarts(end), cfg.temporal.series_end);
 dynamicGraph = computeDynamicGraphStats(pairEvents, events, windowStarts);
 timings.dynamic_graph = toc(clk);
 
@@ -234,12 +243,15 @@ if doSave
 end
 end
 
-function r = scoreSeries(x, mode, binStart, cfg, isCount)
+function r = scoreSeries(x, mode, binStart, cfg, floorKind, trials)
 % One temporal-anomaly call with every parameter taken from the configuration.
 t = cfg.temporal;
+if isempty(trials)
+    trials = double.empty(0,1);
+end
 r = detectTemporalAnomalies(x, t.baseline_window, t.min_baseline_bins, ...
     t.robust_z_threshold, mode, binStart, t.seasonal_lookback_years, ...
-    t.seasonal_min_samples, isCount && cfgGet(cfg, "temporal.poisson_scale_floor", true));
+    t.seasonal_min_samples, floorKind, trials);
 end
 
 function logStage(name)

@@ -5,7 +5,8 @@ function plotActivityTimeline(ax, bundle, entityIndex, cursorTime)
 %   ENTITYINDEX (optional, [] for none) overlays the selected entity's
 %   crimes as ticks; CURSORTIME (optional) draws the playback cursor.
 %   Markers: triangles = months whose count deviates >= threshold robust SD
-%   from the causal 12-month baseline; dashed lines = change points.
+%   from the configured causal baseline (bundle.temporal.anomaly_method:
+%   seasonal same-month or rolling); dashed lines = change points.
 
 if nargin < 3, entityIndex = []; end
 if nargin < 4, cursorTime = NaT; end
@@ -16,10 +17,13 @@ s = bundle.temporal.series;
 a = bundle.temporal.crime_anomalies;
 plot(ax, s.bin_start, s.crimes, '-', 'Color', [0.25 0.45 0.75], 'LineWidth', 1.2, ...
     'DisplayName', 'Crimes per month');
+% Labels are strings ("..."): adding char vectors with + would sum their
+% character codes numerically instead of concatenating text.
 if isfield(bundle.temporal, 'anomaly_method') && bundle.temporal.anomaly_method == "seasonal_same_month"
-    baselineLabel = 'Seasonal baseline (same calendar month)';
+    baselineLabel = "Seasonal baseline (same calendar month, prior years)";
 else
-    baselineLabel = 'Causal baseline (previous 12 months)';
+    t = bundle.config.temporal;
+    baselineLabel = sprintf("Causal baseline (previous %d %ss)", t.baseline_window, t.bin);
 end
 plot(ax, s.bin_start, a.baseline_median, ':', 'Color', [0.4 0.4 0.4], ...
     'DisplayName', baselineLabel);
@@ -49,8 +53,7 @@ if ~isnat(cursorTime)
 end
 hold(ax, 'off');
 ylabel(ax, 'Crimes');
-methodLabel = baselineLabel;
-title(ax, 'Activity over time — ' + methodLabel + ' (solved cases; last months right-censored)');
+title(ax, "Activity over time — " + baselineLabel + " (solved cases; last months right-censored)");
 legend(ax, 'Location', 'northwest', 'Box', 'off');
 grid(ax, 'on');
 end

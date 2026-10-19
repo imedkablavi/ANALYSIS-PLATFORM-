@@ -66,7 +66,8 @@ One entry per meaningful research decision. Template at the end.
   Poisson counting SD (≈ 16). Three months (2018-09, 2019-05, 2019-12) reached |z| ≥ 3.5 on
   ordinary fluctuation. With scale ≥ √(baseline median), none are flagged.
 - **Decision impact**: Poisson scale floor for count series (crimes, new offenders), configurable
-  via `cfg.temporal.poisson_scale_floor`; not applied to the co-offending share. Regression test
+  via `cfg.temporal.sampling_noise_floor`; the co-offending share gets the analogous binomial floor
+  sqrt(p(1-p)/n_crimes) (added after the 2026-10-19 code review). Regression test
   `testPoissonScaleFloorForCounts`. The seasonal regression test now distinguishes "unscored"
   (July 2016, 2 references) from "scored as normal" (July 2018, z = 0).
 - **Confidence / limitation**: high for the arithmetic (reference port); the floor assumes

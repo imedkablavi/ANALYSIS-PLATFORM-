@@ -71,13 +71,41 @@ function testPoissonScaleFloorForCounts(tc)
 months = datetime(2014,1,1) + calmonths(0:47)';
 x = repmat(260, 48, 1);
 x(month(months) == 3) = [259; 260; 261; 275];   % March 2014-2017
-r0 = detectTemporalAnomalies(x, 12, 6, 3.5, "seasonal_same_month", months, 5, 3, false);
-r1 = detectTemporalAnomalies(x, 12, 6, 3.5, "seasonal_same_month", months, 5, 3, true);
+r0 = detectTemporalAnomalies(x, 12, 6, 3.5, "seasonal_same_month", months, 5, 3, "none");
+r1 = detectTemporalAnomalies(x, 12, 6, 3.5, "seasonal_same_month", months, 5, 3, "poisson");
 k = find(months == datetime(2017,3,1));
 verifyTrue(tc, r0.is_high(k));                  % unfloored: spurious flag
 verifyFalse(tc, r1.is_high(k));                 % floored: within counting noise
 verifyEqual(tc, r1.baseline_scale(k), sqrt(260), 'AbsTol', 1e-12);
-verifyTrue(tc, r1.poisson_floor_used(k));
+verifyTrue(tc, r1.floor_used(k));
+end
+
+function testBinomialScaleFloorForShares(tc)
+% Co-offending share with three near-identical prior Marches (0.30, 0.30,
+% 0.31): MAD = 0, so the scale falls back to 1.2533*mean|dev| = 0.0042.
+% A share of 0.36 out of 250 crimes is within binomial noise
+% (sqrt(0.3*0.7/250) = 0.029, z = 2.07) but looks extreme without the
+% floor (z = 14.4).
+months = datetime(2014,1,1) + calmonths(0:47)';
+share = repmat(0.3, 48, 1);
+share(month(months) == 3) = [0.30; 0.30; 0.31; 0.36];
+n = repmat(250, 48, 1);
+r0 = detectTemporalAnomalies(share, 12, 6, 3.5, "seasonal_same_month", months, 5, 3, "none");
+r1 = detectTemporalAnomalies(share, 12, 6, 3.5, "seasonal_same_month", months, 5, 3, "binomial", n);
+k = find(months == datetime(2017,3,1));
+verifyTrue(tc, r0.is_high(k));
+verifyFalse(tc, r1.is_high(k));
+verifyEqual(tc, r1.baseline_scale(k), sqrt(0.3 * 0.7 / 250), 'AbsTol', 1e-12);
+verifyError(tc, @() detectTemporalAnomalies(share, 12, 6, 3.5, ...
+    "seasonal_same_month", months, 5, 3, "binomial", n(1:10)), "MOSAIC:TemporalLengthMismatch");
+end
+
+function testSeasonalModeRejectsWeeklyBins(tc)
+% Weekly bins would compare weeks of the same month in ONE earlier year,
+% which is not a seasonal baseline across years.
+weeks = datetime(2014,1,6) + calweeks(0:155)';
+verifyError(tc, @() detectTemporalAnomalies(ones(156,1), 12, 6, 3.5, ...
+    "seasonal_same_month", weeks, 5, 3), "MOSAIC:SeasonalNeedsMonthlyBins");
 end
 
 function testChangePoint(tc)

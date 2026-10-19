@@ -79,8 +79,12 @@ ax.CLim = [lo hi];
 cb = colorbar(ax);
 cb.Label.String = 'Anomaly score (grey = not scored, red = selected)';
 axis(ax, 'off');
-title(ax, sprintf('Co-offending network within %d hops (%d offenders, %d ties)', ...
-    hops, numnodes(H), numedges(H)));
+ttl = sprintf('Co-offending network within %d hops (%d offenders, %d ties)', ...
+    hops, numnodes(H), numedges(H));
+if ~isnat(cutoffTime)
+    ttl = sprintf('%s — ties formed before %s', ttl, string(cutoffTime, 'yyyy-MM'));
+end
+title(ax, ttl);
 info.nodes = cand;
 info.plot = p;
 end

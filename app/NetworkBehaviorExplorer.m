@@ -87,7 +87,7 @@ classdef NetworkBehaviorExplorer < handle
             b = app.Bundle;
             app.Selected = entityIndex;
             ctx = getEntityContext(b, entityIndex);
-            cutoff = app.cursorTime();
+            cutoff = app.networkCutoff();
             try
                 app.NetInfo = plotEgoNetwork(app.NetAxes, b, entityIndex, 2, ...
                     b.config.app.max_graph_nodes, cutoff);
@@ -95,7 +95,7 @@ classdef NetworkBehaviorExplorer < handle
             catch ME
                 app.showMessage(app.NetAxes, "Network view unavailable: " + ME.message);
             end
-            plotActivityTimeline(app.TimeAxes, b, entityIndex, cutoff);
+            plotActivityTimeline(app.TimeAxes, b, entityIndex, app.cursorTime());
             [t0, t1] = app.window();
             plotSpatialView(app.MapAxes, b, entityIndex, t0, t1);
             plotEvidenceBars(app.EvidenceAxes, b, entityIndex);
@@ -144,7 +144,7 @@ classdef NetworkBehaviorExplorer < handle
             plotSpatialView(app.MapAxes, b, app.Selected, frame.t0, frame.t1);
             if ~isempty(app.Selected)
                 app.NetInfo = plotEgoNetwork(app.NetAxes, b, app.Selected, 2, ...
-                    b.config.app.max_graph_nodes, tEnd);
+                    b.config.app.max_graph_nodes, app.networkCutoff());
                 app.NetInfo.plot.ButtonDownFcn = @(~, evt) app.onGraphClick(evt);
             end
             drawnow limitrate;
@@ -322,6 +322,17 @@ classdef NetworkBehaviorExplorer < handle
             pt = evt.IntersectionPoint;
             [~, k] = min((p.XData - pt(1)).^2 + (p.YData - pt(2)).^2);
             app.selectEntity(app.NetInfo.nodes(k));
+        end
+
+        function t = networkCutoff(app)
+            % Ties are hidden by date only while replaying the past: at the
+            % end of the series (default state) the full network is shown, so
+            % the graph agrees with the Partners tab.
+            if isempty(app.Months) || app.CursorIndex >= numel(app.Months)
+                t = NaT;
+            else
+                t = app.Months(app.CursorIndex);
+            end
         end
 
         function t = cursorTime(app)

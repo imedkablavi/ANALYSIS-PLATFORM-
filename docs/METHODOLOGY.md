@@ -43,7 +43,7 @@ never 0.
   the robust scale is floored at the Poisson SD √(baseline median): a scale estimated from only
   3–5 same-month values can fall far below counting noise (reference check on the real series:
   ≈ 7 crimes for counts of ≈ 260, which produced three spurious flags; with the floor, none).
-  The co-offending share is a proportion and is not floored. Seasonal scoring starts in 2017
+  The co-offending share uses the binomial analogue √(p(1−p)/n_crimes). Seasonal scoring starts in 2017
   (44 of 80 months scored).
 - **Level shifts**: penalized binary segmentation on the monthly count (penalty 2σ²·log n,
   σ from first differences; Truong et al. 2020), minimum segment 6 months, at most 5 changes.

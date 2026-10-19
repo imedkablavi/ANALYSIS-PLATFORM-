@@ -44,7 +44,8 @@ crime), persistent ties, edge persistence, Jaccard, components, largest componen
   it can score a bin; 2014–2016 are therefore unscored (NaN), i.e. 44 of 80 months are scored.
   NaN means "insufficient history", never "normal".
 - Small reference sets give unstable robust scales. Count series therefore use a Poisson floor,
-  scale ≥ √(baseline median) (`cfg.temporal.poisson_scale_floor`). Reference computation on the
+  scale ≥ √(baseline median), and the co-offending share uses the binomial floor √(p(1−p)/n_crimes)
+  (`cfg.temporal.sampling_noise_floor`). Seasonal mode requires monthly bins (error otherwise). Reference computation on the
   real series (Python port, 2026-10-19): without the floor the seasonal rule flags 2018-09
   (z 6.3, scale 7.4 crimes), 2019-05 (z 4.6) and 2019-12 (z −3.9); with the floor it flags none.
   To be confirmed by the MATLAB run (`temporal_anomaly_method_comparison.csv`).
