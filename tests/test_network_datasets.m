@@ -277,3 +277,14 @@ verifyEqual(tc, bundleDatasetInfo(b).entity_plural, "hosts");
 expDir = fullfile(root, b.config.output.experiment_dir);
 verifyTrue(tc, isfile(fullfile(expDir, "ground_truth_evaluation.csv")));
 end
+
+function testLanlRedTeamFoundNextToAuthFile(tc)
+% analyzeDataset uses redteam.txt from the folder of auth.txt by default.
+root = fullfile(tc.TestData.dir, "root_lanl");
+mkdir(root);
+b = analyzeDataset(tc.TestData.auth, struct('root_dir', root, 'use_iforest', false));
+verifyEqual(tc, b.meta.dataset.profile, "lanl_auth");
+verifyTrue(tc, b.meta.dataset.has_labels);
+verifyEqual(tc, b.meta.dataset.label_counts.malicious, 2);
+verifyEqual(tc, b.config.temporal.bin, "hour");     % 1 s .. 151036 s = 41.9 h
+end

@@ -1044,7 +1044,7 @@ classdef NetworkBehaviorExplorer < handle
                 app.setStatus("Import cancelled: unknown format.");
                 return;
             end
-            [mapping, name, ok] = app.askImportOptions(info, string(f));
+            [mapping, name, ok, maxRows] = app.askImportOptions(info, string(f));
             if ~ok
                 app.setStatus("Import cancelled.");
                 return;
@@ -1055,6 +1055,9 @@ classdef NetworkBehaviorExplorer < handle
             end
             if strlength(name) > 0
                 opts.name = name;
+            end
+            if maxRows > 0
+                opts.max_rows = maxRows;      % large traffic files (LANL)
             end
             dlg = uiprogressdlg(app.Figure, 'Title', 'Analysing dataset', ...
                 'Message', char("Importing " + f), 'Value', 0, 'Cancelable', false);
@@ -1102,7 +1105,7 @@ classdef NetworkBehaviorExplorer < handle
             end
         end
 
-        function [mapping, name, ok] = askImportOptions(app, info, fileName)
+        function [mapping, name, ok, maxRows] = askImportOptions(app, info, fileName)
             %ASKIMPORTOPTIONS Modal dialog: column mapping (if needed) + name.
             th = app.Theme;
             needMap = logical(info.needs_mapping);
@@ -1118,7 +1121,8 @@ classdef NetworkBehaviorExplorer < handle
             if ~needMap
                 fields = strings(1, 0);
             end
-            nRows = numel(fields) + 4;
+            isNetwork = string(info.format) == "network_flow";
+            nRows = numel(fields) + 4 + isNetwork;
             w = 480;
             h = 64 + 34 * nRows;
             fp = app.Figure.Position;
@@ -1173,6 +1177,20 @@ classdef NetworkBehaviorExplorer < handle
                 'FontName', th.font.family, 'FontSize', th.font.base);
             nameField.Layout.Row = r;
             nameField.Layout.Column = 2;
+            maxField = [];
+            if isNetwork
+                % Traffic files can hold hundreds of millions of records.
+                r = r + 1;
+                maxLabel = app.label(g, "Max records (0 = all)", th.font.base, ...
+                    th.color.textSecondary, 'normal');
+                maxLabel.Layout.Row = r;
+                maxLabel.Layout.Column = 1;
+                maxField = uieditfield(g, 'numeric', 'Value', 0, 'Limits', [0 Inf], ...
+                    'RoundFractionalValues', 'on', 'FontName', th.font.family, ...
+                    'FontSize', th.font.base);
+                maxField.Layout.Row = r;
+                maxField.Layout.Column = 2;
+            end
             note = app.label(g, "Identifiers are pseudonymized; the analysis may take a while.", ...
                 th.font.small, th.color.textSecondary, 'normal');
             note.Layout.Row = r + 1;
@@ -1189,7 +1207,8 @@ classdef NetworkBehaviorExplorer < handle
             uibutton(btns, 'Text', 'Analyse', 'FontName', th.font.family, ...
                 'FontSize', th.font.base, 'FontWeight', 'bold', ...
                 'BackgroundColor', th.color.accent, 'FontColor', th.color.accentText, ...
-                'ButtonPushedFcn', @(~, ~) app.onImportOk(dlg, drops, fields, labels, required, nameField));
+                'ButtonPushedFcn', @(~, ~) app.onImportOk(dlg, drops, fields, labels, required, ...
+                nameField, maxField));
 
             uiwait(dlg);
             res = struct('ok', false);
@@ -1200,13 +1219,15 @@ classdef NetworkBehaviorExplorer < handle
             ok = isfield(res, 'ok') && res.ok;
             mapping = app.emptyMapping();
             name = "";
+            maxRows = 0;
             if ok
                 mapping = res.mapping;
                 name = res.name;
+                maxRows = res.max_rows;
             end
         end
 
-        function onImportOk(app, dlg, drops, fields, labels, required, nameField)
+        function onImportOk(app, dlg, drops, fields, labels, required, nameField, maxField)
             mapping = app.emptyMapping();
             missing = strings(1, 0);
             for k = 1:numel(fields)
@@ -1223,8 +1244,12 @@ classdef NetworkBehaviorExplorer < handle
                 uialert(dlg, "Choose a column for: " + joinStrings(missing, ", "), 'Missing columns');
                 return;
             end
+            maxRows = 0;
+            if ~isempty(maxField)
+                maxRows = maxField.Value;
+            end
             app.finishDialog(dlg, struct('ok', true, 'mapping', mapping, ...
-                'name', strtrim(string(nameField.Value))));
+                'name', strtrim(string(nameField.Value)), 'max_rows', maxRows));
         end
 
         function finishDialog(~, dlg, result)

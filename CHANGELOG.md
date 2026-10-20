@@ -7,6 +7,7 @@
 - Feature version F3: 12 host traffic features (group `network`, incl. port entropy, fan-out/in, tiny-flow share, failed attempts, beaconing CV); palette slot 7 (validated).
 - Temporal bins day/hour/minute (`binStep`), automatic choice by span; equal dynamic-graph windows for short captures; playback window in bins; mixed timestamp formats parsed completely; pair keys no longer limited to 1e6 entities.
 - Python reference `scripts/reference/network_flow_reference.py`; tests `tests/test_network_datasets.m`.
+- Network import usability: "Max records" field in the app import dialog; LANL `redteam.txt` next to `auth.txt` is used automatically; `scripts/analyze_dataset.m` takes MAX_ROWS / LABELS_FILE / PROFILE and prints the ground-truth evaluation.
 - App redesign: shared theme (`appTheme`, WCAG-checked text contrast, single-hue score ramp), KPI tiles, ranking filters/search, themed plots, empty-state messages, datasets without coordinates.
 - App dataset UI: "Open dataset…" (format detection, column-mapping dialog, progress dialog) and a dataset list fed by `listDatasets`; new tests in `tests/test_visualization_theme.m`.
 - Replay, timeline legend and KPI tile follow the dataset's temporal bin (weekly bins for short imported datasets advanced the replay cursor by a month before).

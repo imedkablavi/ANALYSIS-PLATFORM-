@@ -47,6 +47,15 @@ if info.needs_mapping && ~isfield(opts, "mapping")
     error("MOSAIC:MappingMissing", "%s Pass opts.mapping.", info.message);
 end
 
+% LANL authentication events: use redteam.txt from the same folder as the
+% labels file when none is given (recorded in the import notes).
+if info.format == "network_flow" && info.profile == "lanl_auth" && ~isfield(opts, "labels_file")
+    candidate = fullfile(fileparts(path), "redteam.txt");
+    if isfile(candidate)
+        opts.labels_file = string(candidate);
+    end
+end
+
 % importDataset merges opts.mapping over the detected mapping and reuses
 % this inspection instead of reading the file again.
 importOpts = struct('info', info);
