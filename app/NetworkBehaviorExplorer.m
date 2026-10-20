@@ -226,7 +226,7 @@ classdef NetworkBehaviorExplorer < handle
                 numel(frame.crime_rows), ds.event_plural, height(frame.edges), ...
                 height(frame.new_edges));
             if frame.bin_is_anomalous
-                app.TimeLabel.Text = txt + "  ·  Unusual month (triangles on the timeline)";
+                app.TimeLabel.Text = txt + "  ·  Unusual " + ds.bin + " (triangles on the timeline)";
                 app.TimeLabel.FontWeight = 'bold';
                 if app.AudioBox.Value
                     app.audioCue();
@@ -333,7 +333,7 @@ classdef NetworkBehaviorExplorer < handle
             k.RowSpacing = 6;
             k.ColumnSpacing = 6;
             app.setIf(k, 'BackgroundColor', th.color.surface);
-            labels = ["Entities", "Events", "Scored", "Flagged", "Unusual months", "Data quality"];
+            labels = ["Entities", "Events", "Scored", "Flagged", "Unusual periods", "Data quality"];
             app.KpiValues = gobjects(1, numel(labels));
             app.KpiDetails = gobjects(1, numel(labels));
             for i = 1:numel(labels)
@@ -571,7 +571,7 @@ classdef NetworkBehaviorExplorer < handle
 
             app.Months = NaT(0, 1);
             if isfield(b, 'temporal') && isfield(b.temporal, 'series') && height(b.temporal.series) > 0
-                app.Months = b.temporal.series.bin_start + calmonths(1);   % cursor = end of month
+                app.Months = b.temporal.series.bin_start + ds.bin_step;   % cursor = end of bin
             end
             nMonths = numel(app.Months);
             app.TimeSlider.Limits = [1 max(2, nMonths)];
@@ -580,7 +580,7 @@ classdef NetworkBehaviorExplorer < handle
             replayOn = nMonths > 1;
             app.setReplayEnabled(replayOn);
             if replayOn
-                app.TimeLabel.Text = "Full period  ·  press Play to replay month by month";
+                app.TimeLabel.Text = "Full period  ·  press Play to replay " + ds.bin + " by " + ds.bin;
             else
                 app.TimeLabel.Text = "Replay needs dated events";
             end

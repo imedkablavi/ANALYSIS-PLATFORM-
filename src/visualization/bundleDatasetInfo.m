@@ -13,6 +13,9 @@ function info = bundleDatasetInfo(bundle)
 %                                      format, otherwise "event"/"events"
 %   info.entity_noun / entity_plural   "offender(s)" or "entity/entities"
 %   info.network_label     "Co-offending network" or "Relation network"
+%   info.bin, info.bin_step  temporal bin of the bundle ("month" or "week",
+%                            from bundle.config.temporal.bin; absent ->
+%                            "month") and its calendar step (replay cursor)
 %   Pure function: no graphics, unit-tested.
 
 info.id = "primary";
@@ -34,6 +37,16 @@ if isstruct(bundle) && isfield(bundle, 'meta') && isstruct(bundle.meta) && ...
             info.(f) = logical(d.(f)(1));
         end
     end
+end
+info.bin = "month";
+if isstruct(bundle) && isfield(bundle, 'config') && isfield(bundle.config, 'temporal') && ...
+        isfield(bundle.config.temporal, 'bin')
+    info.bin = string(bundle.config.temporal.bin);
+end
+if info.bin == "week"
+    info.bin_step = calweeks(1);
+else
+    info.bin_step = calmonths(1);
 end
 if info.format == "networkx_burglary_json"
     info.event_noun = "crime";

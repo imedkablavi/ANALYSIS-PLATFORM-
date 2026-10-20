@@ -7,6 +7,7 @@ function kpi = kpiSummary(bundle)
 %     scored           nnz(entities.eligible)
 %     flagged          nnz(iforest_flag | baseline_flag)
 %     unusual_months   nnz(is_high | is_low) of temporal.crime_anomalies
+%                      (bins: months, or weeks for short imported datasets)
 %     warnings         numel(validation.warnings)
 %   plus quality_status ("good" | "warning" | "critical": invalid ->
 %   critical, valid with warnings -> warning, otherwise good) and
@@ -71,11 +72,11 @@ if ~isnan(minEvents)
 end
 monthsDetail = "";
 if ~isnan(nMonths)
-    monthsDetail = sprintf("of %d months", nMonths);
+    monthsDetail = sprintf("of %d %ss", nMonths, bundleDatasetInfo(bundle).bin);
 end
 
 keys = ["entities", "events", "scored", "flagged", "unusual_months", "quality"];
-labels = ["Entities", "Events", "Scored", "Flagged", "Unusual months", "Data quality"];
+labels = ["Entities", "Events", "Scored", "Flagged", "Unusual periods", "Data quality"];
 values = [kpi.entities, kpi.events, kpi.scored, kpi.flagged, kpi.unusual_months, kpi.warnings];
 details = ["", "", scoredDetail, "either detector", monthsDetail, "validation checks"];
 tiles = struct('key', {}, 'label', {}, 'value', {}, 'value_text', {}, ...

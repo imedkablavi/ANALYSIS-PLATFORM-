@@ -28,7 +28,7 @@ cla(ax);
 axis(ax, 'on');
 hold(ax, 'on');
 plot(ax, s.bin_start, s.crimes, '-', 'Color', th.semantic.series, ...
-    'LineWidth', th.mark.line, 'DisplayName', nounTitle + " per month");
+    'LineWidth', th.mark.line, 'DisplayName', nounTitle + " per " + info.bin);
 % Labels are strings ("..."): adding char vectors with + would sum their
 % character codes numerically instead of concatenating text.
 if isfield(bundle.temporal, 'anomaly_method') && bundle.temporal.anomaly_method == "seasonal_same_month"
@@ -44,12 +44,12 @@ lo = a.is_low;
 if any(hi)
     plot(ax, s.bin_start(hi), s.crimes(hi), '^', 'LineStyle', 'none', ...
         'MarkerFaceColor', th.semantic.unusualHigh, 'MarkerEdgeColor', th.color.surface, ...
-        'MarkerSize', th.mark.marker + 1, 'DisplayName', 'Unusually high month');
+        'MarkerSize', th.mark.marker + 1, 'DisplayName', "Unusually high " + info.bin);
 end
 if any(lo)
     plot(ax, s.bin_start(lo), s.crimes(lo), 'v', 'LineStyle', 'none', ...
         'MarkerFaceColor', th.semantic.unusualLow, 'MarkerEdgeColor', th.color.surface, ...
-        'MarkerSize', th.mark.marker + 1, 'DisplayName', 'Unusually low month');
+        'MarkerSize', th.mark.marker + 1, 'DisplayName', "Unusually low " + info.bin);
 end
 cp = bundle.temporal.change_points;
 for k = 1:height(cp)
@@ -79,7 +79,7 @@ ylabel(ax, nounTitle);
 if info.format == "networkx_burglary_json"
     note = "Solved cases only; the last months are right-censored.";
 else
-    note = "The last months may be incomplete.";
+    note = "The last " + info.bin + "s may be incomplete.";
 end
 title(ax, ["Activity over time"; note]);
 styleAxes(ax, th);

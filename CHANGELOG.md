@@ -4,6 +4,7 @@
 
 - App redesign: shared theme (`appTheme`, WCAG-checked text contrast, single-hue score ramp), KPI tiles, ranking filters/search, themed plots, empty-state messages, datasets without coordinates.
 - App dataset UI: "Open dataset…" (format detection, column-mapping dialog, progress dialog) and a dataset list fed by `listDatasets`; new tests in `tests/test_visualization_theme.m`.
+- Replay, timeline legend and KPI tile follow the dataset's temporal bin (weekly bins for short imported datasets advanced the replay cursor by a month before).
 - Dataset import hardening: identifier columns read as text, `#` kept inside values, explicit numeric time units, self-interactions as single-participant events.
 - Fixed synthetic Isolation Forest evaluation to train on clean reference data and score contaminated synthetic observations as novelty detection.
 - Added configurable causal temporal anomaly baselines: rolling 12-month and same-calendar-month seasonal reference.

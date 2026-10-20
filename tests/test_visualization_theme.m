@@ -238,6 +238,14 @@ verifyFalse(tc, info.has_coordinates);
 verifyEqual(tc, info.name, "Edges");
 verifyEqual(tc, info.event_plural, "events");
 verifyEqual(tc, info.entity_plural, "entities");
+verifyEqual(tc, info.bin, "month");                   % no config -> month
+end
+
+function testDatasetInfoWeeklyBins(tc)
+b = struct('config', struct('temporal', struct('bin', "week")));
+info = bundleDatasetInfo(b);
+verifyEqual(tc, info.bin, "week");
+verifyEqual(tc, datetime(2020,1,1) + info.bin_step, datetime(2020,1,8));
 end
 
 %% Themed plot functions (headless smoke test on the synthetic fixture)
