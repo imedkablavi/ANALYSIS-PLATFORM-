@@ -78,6 +78,12 @@ run scripts/generate_report_figures.m
    ```
 4. إن نجح: سترى في `outputs\datasets\...\tables\ground_truth_evaluation.csv` مدى دقة الكشف مقارنة بالتصنيف المنشور.
 5. إن كان الملف كبيرًا جدًا أو بطيئًا: أضف `struct('max_rows', 500000)` كوسيط ثانٍ.
+6. التجارب على نفس البيانات: افتح `scripts/run_experiments.m` وغيّر السطر `DATASET = "";` إلى `DATASET = "latest";`، ثم شغّل:
+   ```matlab
+   run scripts/run_experiments.m
+   ```
+   الناتج في `outputs\datasets\<id>\experiments\`، وأهم ملفين فيه هما `experiments_summary.md` و `E11_ground_truth_by_feature_set.csv`.
+7. انسخ مجلد `outputs\datasets\` كاملًا إلى الفلاشة.
 
 ## 8. التطبيق
 ```matlab
