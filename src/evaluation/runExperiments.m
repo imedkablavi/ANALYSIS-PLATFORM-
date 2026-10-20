@@ -16,9 +16,13 @@ function results = runExperiments(bundle, cfg, outDir, opts)
 %        min_events, review budget
 %   E9  runtime per pipeline stage and bundle memory
 %   E10 (usability) is a human study: protocol in docs/EVALUATION.md.
+%   E11 detection against PUBLISHED labels, per feature-group set
+%       (network-traffic datasets with labels only: CTU-13, CIC-IDS2017,
+%       UNSW-NB15, LANL red team). Labels are joined after scoring.
 %
-%   No experiment uses real labels (none exist). Synthetic results are
-%   written to files whose names start with "synthetic_".
+%   Without published labels (e.g. the burglary artifact) no experiment
+%   uses real labels. Synthetic results are written to files whose names
+%   start with "synthetic_".
 
 arguments
     bundle (1,1) struct
@@ -93,6 +97,8 @@ abl = table('Size', [numel(sets) 6], 'VariableTypes', ["string","double","double
     'VariableNames', {'feature_set','n_features','baseline_topk_jaccard_vs_full', ...
     'baseline_spearman_vs_full','iforest_topk_jaccard_vs_full','iforest_spearman_vs_full'});
 k = res0.agreement.k;
+hasTruth = isfield(bundle, "ground_truth") && isfield(bundle.ground_truth, "entities");
+gtRows = table();
 for s = 1:numel(sets)
     if isequal(sort(sets{s}), sort(string(cfg.anomaly.feature_groups)))
         r = res0;   % the full model is already in the bundle; no refit
@@ -105,16 +111,36 @@ for s = 1:numel(sets)
     abl.baseline_spearman_vs_full(s) = spearmanRho(r.baseline.score, res0.baseline.score);
     abl.iforest_topk_jaccard_vs_full(s) = topKJaccard(r.iforest.score, res0.iforest.score, k);
     abl.iforest_spearman_vs_full(s) = spearmanRho(r.iforest.score, res0.iforest.score);
+    if hasTruth
+        scored = table(r.eligible, r.baseline.score, r.iforest.score, ...
+            'VariableNames', {'eligible', 'baseline_score', 'iforest_score'});
+        e = evaluateGroundTruth(scored, bundle.ground_truth.entities);
+        e = addvars(e, repmat(abl.feature_set(s), height(e), 1), ...
+            'Before', 1, 'NewVariableNames', 'feature_set');
+        gtRows = [gtRows; e]; %#ok<AGROW>
+    end
 end
 writetable(abl, fullfile(outDir, "E4_ablation_real_ranking_consistency.csv"));
 md(end+1,1) = "";
 md(end+1,1) = "## E4 Feature-group ablation (real data, ranking consistency with the full model)";
 md = [md; tableToMarkdown(abl)];
+if hasTruth
+    writetable(gtRows, fullfile(outDir, "E11_ground_truth_by_feature_set.csv"));
+    md(end+1,1) = "";
+    md(end+1,1) = "## E11 Detection against the published labels (per feature-group set)";
+    md(end+1,1) = "Labels are joined after scoring and never used as features. chance_ap = " + ...
+        "positive rate (average precision of a random ranking). Unknown hosts (e.g. CTU-13 " + ...
+        "Background) are excluded in known_only and counted as negatives in unknown_as_benign.";
+    shown = gtRows(gtRows.setting == "known_only", {'feature_set', 'detector', ...
+        'n_scored', 'n_malicious', 'roc_auc', 'average_precision', 'chance_ap', ...
+        'precision_at_k', 'malicious_not_scored'});
+    md = [md; tableToMarkdown(shown)];
+end
 
 % ---------------- E5-E7 synthetic injection -----------------------------------------------
 Z = res0.prep.Z;
 colGroups = res0.prep.groups;
-targets = ["activity","temporal","spatial","cooffending","graph","sequence"];
+targets = ["activity","temporal","spatial","cooffending","graph","sequence","network"];
 targets = targets(ismember(targets, colGroups));
 shifts = cfg.evaluation.synthetic_shift;
 reps = cfg.evaluation.synthetic_repeats;
@@ -246,15 +272,18 @@ md = [md; tableToMarkdown(perf)];
 
 % ---------------- real system-level temporal findings (context; not part of synthetic E5) --
 ta = bundle.temporal;
+dsInfo = bundleDatasetInfo(bundle);
 flaggedMonths = ta.series.bin_start(ta.crime_anomalies.is_high | ta.crime_anomalies.is_low);
 md(end+1,1) = "";
 md(end+1,1) = "## Real temporal findings (system level)";
-md(end+1,1) = sprintf("Months with |robust z| >= %.1f using the configured %s temporal baseline: %s", ...
+md(end+1,1) = sprintf("%ss with |robust z| >= %.1f using the configured %s temporal baseline: %s", ...
+    upper(extractBefore(dsInfo.bin, 2)) + extractAfter(dsInfo.bin, 1), ...
     cfg.temporal.robust_z_threshold, cfg.temporal.anomaly_method, ...
-    joinStrings(string(flaggedMonths, 'yyyy-MM'), ", "));
+    joinStrings(string(flaggedMonths, dsInfo.time_format), ", "));
 if height(ta.change_points) > 0
-    md(end+1,1) = "Change points (first month of new level): " + joinStrings(compose("%s (%.0f -> %.0f crimes/month)", ...
-        string(ta.change_points.bin_start, 'yyyy-MM'), ta.change_points.mean_before, ...
+    md(end+1,1) = "Change points (first bin of new level): " + joinStrings(compose("%s (%.0f -> %.0f " + ...
+        dsInfo.event_plural + "/" + dsInfo.bin + ")", ...
+        string(ta.change_points.bin_start, dsInfo.time_format), ta.change_points.mean_before, ...
         ta.change_points.mean_after), ", ");
 else
     md(end+1,1) = "No change point exceeded the BIC-type penalty.";
@@ -262,7 +291,7 @@ end
 
 writeTextFile(fullfile(outDir, "experiments_summary.md"), joinStrings(md, newline));
 results = struct('ablation', abl, 'synthetic', agg, 'sensitivity', sensT, ...
-    'performance', perf, 'score_quantiles', dist);
+    'performance', perf, 'score_quantiles', dist, 'ground_truth', gtRows);
 end
 
 function t = droppedText(d)

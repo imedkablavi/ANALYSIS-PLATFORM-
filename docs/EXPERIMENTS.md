@@ -17,6 +17,12 @@ version and settings. **No results are reported here until a MATLAB run produces
 | E8 | How sensitive are results? | seeds 1–10 (pairwise top-k Jaccard); NumLearners 50–400; NumObservationsPerLearner 64–512; min_events 2/3/5; budget 0.5–5 % | `E8_sensitivity.csv` |
 | E9 | Runtime and memory | per-stage timings; bundle size | `E9_performance.csv` |
 | E10 | Can users interpret the system? | task-based study (docs/EVALUATION.md) | study sheet (manual) |
+| E11 | Network datasets with published labels: how well does each feature-group set rank the labelled malicious hosts? | labels joined after scoring (`evaluateGroundTruth`); every ablation set × baseline/IF × known_only/unknown_as_benign; ROC-AUC, AP vs chance, precision/recall@k, malicious hosts not scored | `E11_ground_truth_by_feature_set.csv` |
+
+Network datasets: `analyzeDataset(<file>)`, then `scripts/run_experiments.m` with
+`DATASET = "latest"` (uses the dataset's adapted configuration; output in
+`outputs/datasets/<id>/experiments/`). Ablation sets without any feature in the dataset are
+skipped (e.g. `network` for the burglary artifact).
 
 Spatial, activity and co-offending injections run in the same grid (reported, not separately
 numbered).

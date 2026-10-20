@@ -4,6 +4,14 @@
 > framework, ethics and appendices are written. **Every result is a placeholder** marked
 > `[PENDING MATLAB RUN — do not fill by hand]`; the MATLAB pipeline and experiments have not been
 > executed yet (docs/REPRODUCIBILITY.md §4). Human fields are marked `[TO FILL]`. Task T-063.
+>
+> **Scope update 2026-10-20.** The project owner confirmed that the assigned topic concerns
+> **computer-network traffic**. The report is therefore organised around labelled network-security
+> datasets (primary: CTU-13; secondary: CIC-IDS2017, UNSW-NB15, LANL) [NET]. The burglary
+> co-offending artifact analysed first is kept as a *first case study* (§3.6 and the burglary
+> rows of §4) until the owner decides whether it stays in the final report (TASKS_FOR_ADMIN 11b).
+> Network-dataset facts are `[PENDING DOWNLOAD + MATLAB RUN]`: the files could not be downloaded in
+> the development environment.
 
 ---
 
@@ -18,8 +26,9 @@
 | Author(s) | `[TO FILL]` (name, student number) |
 | Instructor | `[TO FILL]` |
 | Date | `[TO FILL]` |
-| Repository version | commit `[TO FILL]`; project version 0.2.0, feature version F2 [CFG] |
-| Dataset version | Git blob SHA `3afe9cbb4e313fb056f1b115c92a3f750f4698b9` [DSI] |
+| Repository version | commit `[TO FILL]`; project version 0.2.0, feature version F3 [CFG] |
+| Primary dataset | CTU-13 scenario `[TO FILL: scenario number and .binetflow file name]`, Git blob SHA `[TO FILL]` [NET] |
+| Case-study dataset | burglary artifact, Git blob SHA `3afe9cbb4e313fb056f1b115c92a3f750f4698b9` [DSI] |
 
 ### Source keys used in brackets
 
@@ -57,68 +66,71 @@ from. Keys:
 | [PIPE] | src/pipeline/runAnalysisPipeline.m |
 | [RUNEXP] | src/evaluation/runExperiments.m |
 | [FIG] | scripts/generate_report_figures.m |
+| [NET] | docs/NETWORK_DATASETS.md |
+| [NETREF] | scripts/reference/network_flow_reference.py |
 
 ### Terminology used throughout
 
-The scored unit is the **anonymized offender record** (`OID#n` in the source) together with its
-attached solved-burglary records. Outputs are called *anomaly scores*, *behavioural deviations* or
-*unusual record patterns*. They are never statements about guilt, intent or dangerousness, and
-scored entities are never called "criminal", "guilty" or "suspect" [MET §1; ETH §1]. The word
-"suspicious" in the assigned title is read as "statistically unusual relative to a reference
-population".
+In the network datasets the scored unit is a **host** — an IP address or computer name, replaced
+by a pseudonym `ENT…` on import — described by the flows (connections) or authentication events it
+takes part in [NET]. In the burglary case study it is the **anonymized offender record** (`OID#n`).
+Outputs are called *anomaly scores*, *behavioural deviations* or *unusual traffic / record
+patterns*. A high score is never a statement that a host is compromised or that a person is
+guilty; scored entities are never called "attacker", "criminal" or "suspect" [MET §1; ETH §1].
+The word "suspicious" in the assigned title is read as "statistically unusual relative to a
+reference population". Published dataset labels (botnet, attack, red team) are used only to
+*evaluate* the detectors after scoring (§4.10).
 
 ---
 
 ## Abstract
 
-This project builds a MATLAB analytical system that examines observable behavioural patterns in a
-real, anonymized co-offending network and presents the evidence in a linked, replayable
-multimedia application. The data are a pinned public artifact derived from solved burglary cases
-supplied for research by the Israel National Police within the ROXANNE project. Before any
-analysis, the artifact is checked by 37 validation rules; the analysis then rebuilds the offender
-network from the crime records, which allows each co-offending tie to be time-stamped. Twenty-eight
-entity-level features in six groups (activity, temporal, spatial, co-offending, graph, sequence)
-describe each offender record. System-level analyses cover monthly activity with causal
-same-calendar-month baselines and change-point detection, a normalized-grid space–time excess
-test, a yearly dynamic network and a derived event alphabet with a first-order Markov model.
-Unusual record patterns are ranked by a transparent robust baseline and by Isolation Forest on the
-same prepared matrix, under an explicit review budget, and every ranking is explained by an exact
-baseline decomposition, an occlusion attribution and generated evidence text. Because no ground
-truth exists, evaluation combines data-quality checks, detector agreement, real-data ablation,
-clearly labelled synthetic injection, sensitivity analysis, runtime measurement and a planned
-usability study. An anomaly score is a deviation from a statistical reference population, not a
-determination about any person.
+This project builds a MATLAB analytical system that ranks unusual behaviour of hosts in computer-
+network traffic and presents the evidence in a linked, replayable multimedia application. The
+primary data are the labelled botnet captures of CTU-13; CIC-IDS2017, UNSW-NB15 and the LANL
+authentication events are supported as secondary datasets. Each file is recognised by a documented
+layout profile, validated, pseudonymized (no IP address leaves the import) and converted into a
+time-stamped host-interaction network. Twelve traffic features (fan-out and fan-in, destination-
+port diversity and entropy, tiny-flow share, failed attempts, flow size and duration, and a
+beaconing measure — the regularity of repeated connections typical of command-and-control
+traffic) complement graph, activity, timing and sequence features. A transparent robust baseline
+and Isolation Forest score the same prepared matrix under an explicit review budget; every
+ranking is explained by an exact baseline decomposition, an occlusion attribution and generated
+evidence text. Because the network datasets carry published labels, detection quality is measured
+against them — after scoring and never as features — with ROC-AUC, average precision against its
+chance level and precision at k, separately for hosts with verified labels and with unlabelled
+background hosts counted as negatives. Synthetic injection, sensitivity analysis, runtime
+measurement and a usability study complete the evaluation. The system was first developed on an
+anonymized co-offending network, which is retained as a case study.
 
 **Results:** `[PENDING MATLAB RUN]`
 
-**Keywords:** anomaly detection, co-offending networks, Isolation Forest, explainability,
+**Keywords:** network anomaly detection, botnet traffic, CTU-13, Isolation Forest, explainability,
 temporal analysis, linked views, multimedia visualization, MATLAB.
 
 ## Özet
 
-Bu proje, gerçek ve anonimleştirilmiş bir birlikte suç işleme (co-offending) ağında gözlemlenebilir
-davranış örüntülerini inceleyen ve bulguları bağlantılı, yeniden oynatılabilir bir multimedya
-uygulamasıyla sunan MATLAB tabanlı bir analiz sistemi geliştirmektedir. Veri, ROXANNE projesi
-kapsamında İsrail Ulusal Polisi tarafından araştırma amacıyla sağlanan çözülmüş hırsızlık
-vakalarından türetilmiş, sürümü sabitlenmiş açık bir veri dosyasıdır. Analizden önce dosya 37
-doğrulama kuralıyla denetlenir; ardından suçlu ağı suç kayıtlarından yeniden kurulur ve böylece
-her birlikte suç ilişkisine zaman damgası atanabilir. Her suçlu kaydı altı gruptaki (etkinlik,
-zamansal, mekânsal, birlikte suç işleme, çizge, dizi) yirmi sekiz özellikle tanımlanır. Sistem
-düzeyinde aylık etkinlik nedensel aynı-takvim-ayı tabanlarıyla ve değişim noktası tespitiyle,
-mekânsal-zamansal yoğunlaşma normalize bir ızgara üzerinde, ağın yıllık değişimi ve türetilmiş
-bir olay alfabesi üzerinde birinci dereceden Markov modeli incelenir. Olağandışı kayıt örüntüleri,
-aynı hazırlanmış matris üzerinde şeffaf bir dayanıklı (robust) taban model ve Isolation Forest ile,
-açıkça belirtilen bir inceleme bütçesi altında sıralanır; her sıralama, taban modelin tam
-ayrışımı, bir örtme (occlusion) katkı analizi ve otomatik üretilen kanıt metniyle açıklanır.
-Gerçek etiket bulunmadığından değerlendirme; veri kalitesi denetimleri, dedektör uyumu, gerçek
-veride özellik grubu ablasyonu, açıkça "sentetik" olarak etiketlenmiş anomali enjeksiyonu,
-duyarlılık analizi, çalışma süresi ölçümü ve planlanan bir kullanılabilirlik çalışmasından
-oluşur. Bir anomali skoru istatistiksel bir referans kitleden sapmayı ifade eder; hiçbir kişi
-hakkında suçluluk, niyet ya da tehlikelilik yargısı değildir.
+Bu proje, bilgisayar ağı trafiğinde host'ların (IP adresleri / bilgisayarlar) olağandışı
+davranışlarını sıralayan ve bulguları bağlantılı, yeniden oynatılabilir bir multimedya
+uygulamasıyla sunan MATLAB tabanlı bir analiz sistemi geliştirmektedir. Birincil veri, etiketli
+botnet trafiği içeren CTU-13 veri setidir; CIC-IDS2017, UNSW-NB15 ve LANL kimlik doğrulama olayları
+ikincil veri setleri olarak desteklenir. Her dosya belgelenmiş bir biçim profiliyle tanınır,
+doğrulanır, takma adlandırılır (hiçbir IP adresi içe aktarmanın dışına çıkmaz) ve zaman damgalı bir
+host etkileşim ağına dönüştürülür. On iki trafik özelliği (bağlantı yayılımı, hedef port çeşitliliği
+ve entropisi, küçük akış oranı, başarısız denemeler, akış boyutu ve süresi ile komuta-kontrol
+trafiğine özgü düzenli tekrar eden bağlantıları ölçen "beaconing" ölçüsü) çizge, etkinlik, zaman ve
+dizi özelliklerini tamamlar. Şeffaf bir dayanıklı taban model ve Isolation Forest aynı hazırlanmış
+matrisi açık bir inceleme bütçesi altında puanlar; her sıralama, taban modelin tam ayrışımı, bir
+örtme (occlusion) katkı analizi ve otomatik kanıt metniyle açıklanır. Ağ veri setleri yayımlanmış
+etiketler içerdiğinden tespit başarısı bu etiketlere göre — puanlamadan sonra ve asla özellik
+olarak kullanılmadan — ROC-AUC, şans düzeyine göre ortalama kesinlik ve ilk k'deki kesinlik ile
+ölçülür. Sentetik enjeksiyon, duyarlılık analizi, çalışma süresi ölçümü ve kullanılabilirlik
+çalışması değerlendirmeyi tamamlar. Sistem önce anonimleştirilmiş bir birlikte suç işleme ağı
+üzerinde geliştirilmiş, bu çalışma örnek vaka olarak korunmuştur.
 
 **Sonuçlar:** `[PENDING MATLAB RUN]`
 
-**Anahtar kelimeler:** anomali tespiti, birlikte suç işleme ağları, Isolation Forest,
+**Anahtar kelimeler:** ağ anomali tespiti, botnet trafiği, CTU-13, Isolation Forest,
 açıklanabilirlik, zamansal analiz, bağlantılı görünümler, multimedya görselleştirme, MATLAB.
 
 ---
@@ -127,21 +139,25 @@ açıklanabilirlik, zamansal analiz, bağlantılı görünümler, multimedya gö
 
 ### 1.1 Problem
 
-Networks of interacting entities — here, offender records linked by jointly recorded offences —
-contain patterns in *when*, *where*, *with whom* and *in what order* events occur. Most records
-follow common patterns; a few deviate. An analyst who wants to inspect such deviations needs
-(a) a reproducible way to rank them, (b) evidence that explains each ranking in measurable terms
-and (c) a presentation that makes the temporal and relational context visible. A single score
-without context invites over-interpretation; a collection of unrelated charts does not support
-reasoning about one entity across time, space and network.
+Hosts in a computer network leave records of *when*, *with whom*, *on which ports* and *how
+regularly* they communicate. Most hosts follow common patterns; a few deviate — for example a host
+that suddenly contacts hundreds of destinations, probes many ports with tiny flows, fails repeated
+logins, or calls the same server at clock-like intervals, as bots do when they poll a command-and-
+control server [NET]. An analyst who wants to inspect such deviations needs (a) a reproducible way
+to rank them, (b) evidence that explains each ranking in measurable terms, (c) a presentation that
+makes the temporal and relational context visible and (d) where labels exist, an honest
+measurement of how well the ranking finds the known malicious hosts. A single alert score without
+context invites over-interpretation; unrelated charts do not support reasoning about one host
+across time and network.
 
 ### 1.2 Motivation
 
 The assigned topic asks for the analysis of suspicious behaviour patterns in a network and their
 multimedia-supported visualization. The project interprets "suspicious" strictly as *statistically
-unusual with respect to a documented reference population* [PC; MET §1], and treats multimedia as
-the synchronized, time-based, interactive presentation of analytical evidence, because the
-dataset contains no audio or video streams [DSI; MM]. The exact assignment wording is not yet
+unusual with respect to a documented reference population* [PC; MET §1], and "network" as
+computer-network traffic (owner decision 2026-10-20) [PC; NET]. Multimedia is the synchronized,
+time-based, interactive presentation of analytical evidence, because the datasets contain no audio
+or video streams [MM]. The exact assignment wording is not yet
 transcribed into the repository (task T-001) `[TO FILL: assignment wording, once available]`.
 
 ### 1.3 Research questions
@@ -160,7 +176,14 @@ weaken it.
 
 ### 1.4 Contributions
 
-1. **A verified, pinned data foundation**: the artifact is identified by its Git blob SHA,
+1. **Direct support for four labelled network-security datasets** (CTU-13, CIC-IDS2017,
+   UNSW-NB15, LANL) through documented layout profiles with content checks, pseudonymization of
+   addresses, per-flow attributes without addresses, and a host-level ground truth derived from
+   the published labels; and an evaluation that separates verified labels from unlabelled
+   background traffic [NET].
+1. **Host traffic features** including a beaconing measure for command-and-control regularity
+   [FE; NET].
+1. **A verified, pinned data foundation** (case study): the artifact is identified by its Git blob SHA,
    validated by 37 checks before analysis, and its structure is characterised; notably, the
    offender network is shown to be exactly the one-mode projection of the offender–crime records
    [AUD §3].
@@ -173,26 +196,34 @@ weaken it.
    with an explicit review budget instead of an unjustifiable "risk threshold" [ANO].
 5. **Per-entity explanations**: exact baseline shares, Isolation Forest occlusion deltas, a
    dominant feature group and generated text with a mandatory interpretation caveat [XAI].
-6. **An evaluation protocol for the no-ground-truth setting** (E1–E10), including synthetic
+6. **An evaluation protocol** with real labels where they exist (E11) and for the no-ground-truth setting (E1–E10), including synthetic
    injection with clean-reference novelty training for Isolation Forest [EXP; EVA].
 7. **A linked multimedia application** with brushing and linking, overview-to-detail navigation,
    time-cursor replay and an optional audio cue [MM].
 
 ### 1.5 Scope and non-goals
 
-In scope: offender-record-level profiles, system-level temporal/spatial/network/sequence
-analysis, unsupervised ranking, explanation and interactive presentation of one anonymized
-artifact.
+In scope: host-level traffic profiles, system-level temporal/network/sequence analysis,
+unsupervised ranking, evaluation against published labels, explanation and interactive
+presentation of public network-security datasets; the burglary artifact as a first case study.
 
 Non-goals [PC; ETH §1]:
 
+- no intrusion-prevention, blocking or attribution of attacks to people;
+- no supervised classifier trained on the labels (the question is what an unsupervised, explained
+  ranking finds);
 - no prediction of criminality from demographic or protected attributes (none are present);
 - no identification of real people, no re-identification attempts, no external joins;
 - no production law-enforcement or risk-assessment system;
 - no web/mobile stack added for appearance;
 - no fabricated results used as evidence.
 
-**Anomaly ≠ guilt.** Every record in the artifact is already a solved burglary case. An anomaly
+**Anomaly ≠ compromise.** In the network datasets a high score means that a host's traffic is
+unusual among the hosts of the same capture; servers, scanners run by administrators and busy
+gateways are unusual without being malicious. Published labels show how often unusual coincides
+with malicious in these benchmark captures; they do not turn a score into a verdict.
+
+**Anomaly ≠ guilt (case study).** Every record in the burglary artifact is already a solved case. An anomaly
 score therefore says nothing about whether an offence happened; it says only that the recorded
 pattern of an offender record is unusual relative to other recorded offender records with at least
 three cases. Unusual can reflect data-collection artefacts (date heaping, batch solving, recording
@@ -205,6 +236,21 @@ practice) as much as behaviour [ETH §2].
 Only works listed in docs/SOURCE_INDEX.md are cited [SI]. Entries marked (m) in the source index
 are standard references cited from memory and must be verified before submission (see
 References).
+
+### 2.0 Network intrusion datasets and botnet behaviour
+
+García et al. (2014) published CTU-13, thirteen captures of real botnet traffic mixed with normal
+and background traffic in a university network, with every bidirectional flow labelled, and used it
+to compare botnet detection methods. Sharafaldin et al. (2018) generated CIC-IDS2017 from profiled
+benign behaviour and scripted attacks (DoS, DDoS, port scan, brute force, web attacks, botnet,
+infiltration); later analyses report labelling and feature-extraction errors in its flow files
+(Engelen et al., 2021; SciTePress 2022 study), which this project treats as known limitations
+rather than ground truth beyond doubt. Moustafa and Slay (2015) built UNSW-NB15 with nine attack
+families. Kent (2015) released two months of authentication, process, DNS and flow events from the
+Los Alamos National Laboratory enterprise network together with red-team activity. Periodic
+contact with a command-and-control server ("beaconing") and wide, shallow fan-out (scanning,
+spam) are recurring botnet traffic characteristics described for CTU-13 (García et al., 2014); the
+traffic features of §4.3 operationalise these as measurable host properties.
 
 ### 2.1 Anomaly detection and its evaluation
 
@@ -264,7 +310,65 @@ study.
 
 ## 3 Data
 
-### 3.1 Source, licence and citation
+### 3.1 Network-traffic datasets
+
+| Dataset | Role | File used | Hosts / events | Labels | Source |
+|---|---|---|---|---|---|
+| CTU-13 | **primary** | one scenario's `.binetflow` (bidirectional Argus flows) | IP addresses; one flow = one event | Botnet → malicious; Normal → benign; Background → **unknown** | García et al. (2014); CC BY [NET] |
+| CIC-IDS2017 | secondary | one day of `GeneratedLabelledFlows` | IP addresses | BENIGN / attack name | Sharafaldin et al. (2018) [NET] |
+| UNSW-NB15 | secondary | `UNSW-NB15_1.csv` (49 columns, no header) | IP addresses | `Label` 0/1, `attack_cat` | Moustafa & Slay (2015) [NET] |
+| LANL | secondary | `auth.txt` subset (`max_rows`) + `redteam.txt` | computers; one authentication = one event | red-team events → malicious | Kent (2015) [NET] |
+
+Selected files and their versions: `[TO FILL after download: scenario/day/part, file name, size,
+Git blob SHA]`.
+
+### 3.2 Import, validation and privacy (network)
+
+Layouts are recognised by `matchNetworkProfile`: headered files by their column names
+(normalised for case and spaces), headerless files by column count **and** content checks on the
+first 200 rows (IPv4 addresses, integer times, 0/1 labels, Success/Fail), so a file is never
+silently read with the wrong layout [NET]. `importNetworkFlows` turns each record into an event
+between its source and destination hosts and keeps a flow table with time, duration (s), bytes,
+packets, ports, protocol and authentication outcome — **indices only, no addresses**. Hosts are
+pseudonymized `ENT…` in order of first appearance; the address map is not stored unless requested
+and then only outside the bundle (git-ignored) [NET; DATASET_IMPORT]. Timestamps are parsed with
+each dataset's documented formats (CTU microseconds, CIC mixed day/month layouts, UNSW POSIX
+seconds, LANL relative seconds), never by automatic guessing. The validation checks of §3.6.4 run
+on every dataset; link-file checks are "not applicable" because relations are derived from shared
+flows.
+
+### 3.3 Dataset facts (to be filled from the run)
+
+| Fact | Value |
+|---|---|
+| Flows read / hosts / hosts with ≥ 3 flows | `[PENDING DOWNLOAD + MATLAB RUN]` |
+| Capture span and chosen time bin | `[PENDING]` (`configureForDataset`: minute bins below 24 h, hour bins up to 30 days) |
+| Labelled flows malicious / benign / unknown | `[PENDING]` |
+| Hosts malicious / benign / unknown | `[PENDING]` |
+| Validation result | `[PENDING]` |
+
+Reference check before MATLAB: the independent Python reference [NETREF] was run on a real
+published capture in the CTU-13 layout (Stratosphere's public test capture, 6,751 flows, 497 hosts,
+unlabelled): the infected host initiated 99.7 % of its 6,751 flows to 495 distinct destinations
+over 10 destination ports, with a most regular destination at gap CV 0.099 — the kind of profile
+the traffic features are designed to expose. This sanity check is not a result of this project.
+
+### 3.4 Labels and ground truth
+
+`labelNetworkFlows` maps each published label to malicious / benign / unknown and to the endpoint it
+describes (CTU-13 `To-…` labels describe the destination). A host is malicious when at least one
+labelled record about it is malicious, benign when it has only benign labelled records, unknown
+otherwise (`networkGroundTruth`) [NET]. CTU-13 Background traffic is explicitly *not* benign.
+
+### 3.5 Known dataset limitations
+
+CIC-IDS2017: label and feature errors and 12-hour timestamps without AM/PM in some files;
+CTU-13: most traffic is unlabelled background; UNSW-NB15: synthetic testbed traffic; LANL: red-team
+labels cover successful authentications only and times are relative [NET; §2.0].
+
+### 3.6 First case study: burglary co-offending artifact
+
+#### 3.6.1 Source, licence and citation
 
 | Item | Value |
 |---|---|
@@ -282,14 +386,14 @@ The provider's description (around 23,000 cases, 2012–2021) and the exact arti
 IDs, dates 2010-12-01 to 2020-09-28) describe different layers; the artifact is the authority for
 schema and statistics [DSI].
 
-### 3.2 Schema
+#### 3.6.2 Schema
 
 NetworkX JSON with `directed = true`, `multigraph = false`, `graph`, `nodes`, `links` [DSI].
 Nodes are of type `offender` and carry `list_cid` and a nested `crime_details` mapping with
 `X`, `Y`, `date`, `num_of_offenders`. Links carry `weight`, `type`, `observed`, `source`, `target`
 [DSI; DD].
 
-### 3.3 Verified facts
+#### 3.6.3 Verified facts
 
 All values below were verified on the artifact by the independent reference audit
 (`scripts/reference/audit_dataset_reference.py`) and are checked by the MATLAB regression test
@@ -323,7 +427,7 @@ All values below were verified on the artifact by the independent reference audi
 ≈ 1.418 (= 34,156 / 24,087) per unique crime (resolved 2026-10-19 against the reference audit;
 the offenders-per-crime distribution above was also corrected to include sizes 10–12).
 
-### 3.4 Validation design
+#### 3.6.4 Validation design
 
 Validation runs before any analysis; nothing is silently repaired; an error-level failure stops
 the pipeline [MET §2]. The 37 checks are implemented in `validateBurglaryNetwork` and exported as
@@ -345,7 +449,7 @@ analysis continues), 8 *info* checks (record a property of the data, no judgemen
 plausibility bounds are 2000-01-01 to 2021-12-31 and are used for validation only, never to drop
 rows [CFG].
 
-### 3.5 Key structural findings
+#### 3.6.5 Key structural findings
 
 1. **Reciprocal links.** All 21,302 links occur in reciprocal pairs with equal weights, i.e.
    10,651 undirected relations; `directed = true` is a serialization property, not a semantic one
@@ -376,7 +480,7 @@ rows [CFG].
 10. **Unsupported analyses.** No hour-of-day analysis, no crime-type analysis (the upstream
     free-text embedding is not in this artifact), no real-world distances or maps [DSI].
 
-### 3.6 Privacy
+#### 3.6.6 Privacy
 
 Identifiers are the provider's pseudonyms (`OID#n`, `CID#n`); coordinates are provider min-max
 scaled "to prevent precise retrieval of the localization of the site" [ETH §5; SPA]. The project
@@ -468,6 +572,28 @@ n_i = `num_of_offenders`. "min" is the minimum number of crimes for the feature 
 Group sizes: activity 3, temporal 6, spatial 4, co-offending 4, graph 8, sequence 3 [REG].
 `component_id` is stored for navigation but is not a model feature [FE].
 
+**Network-traffic features (group `network`, feature version F3).** For network datasets twelve
+host features are added (`computeNetworkFeatures`) [FE; NET]; *outgoing* = flows the host
+initiated:
+
+| # | Feature | min | Transform | Definition |
+|---|---|---|---|---|
+| 29–30 | `out_flows`, `in_flows` | 1 | log1p | flows initiated / received |
+| 31 | `out_share` | 1 | – | out / (out + in) |
+| 32–33 | `distinct_dst`, `distinct_src_in` | 1 | log1p | fan-out / fan-in (distinct peers) |
+| 34 | `distinct_dport` | 1 | log1p | distinct destination ports |
+| 35 | `dport_entropy` | 2 | – | −Σ p log₂ p over destination ports |
+| 36–37 | `median_bytes_out`, `median_duration_out` | 1 | log1p | medians of outgoing flows |
+| 38 | `small_flow_fraction` | 1 | – | outgoing flows with ≤ 2 packets / outgoing |
+| 39 | `failed_fraction` | 1 | – | failed / outgoing authentications (LANL) |
+| 40 | `beacon_cv_min` | 4 | – | min over destinations with ≥ 4 flows of std/mean of the gaps between flow starts (≈ 0 = clock-like) |
+
+In the network datasets every event has exactly two participants, so the co-offending group sizes
+are constant and dropped automatically; spatial features are undefined (no coordinates) and
+dropped; graph features describe the host-interaction network; the feature definitions were
+cross-checked against the Python reference on a hand-built CTU-13 fixture [NETREF;
+`tests/test_network_datasets.m`]. **No feature reads the label columns.**
+
 Design decisions [FE]: gap features need at least three crimes (two crimes give one gap and no
 dispersion); radius of gyration replaces mean pairwise distance (same concept, O(k) instead of
 O(k²)); in/out degree is removed because every link is reciprocal; `log1p` keeps a handful of
@@ -482,7 +608,14 @@ for temporal hold-out experiments [FE].
 
 ### 4.4 Temporal analysis
 
-**System series.** Monthly crimes, active offenders, new offenders (first-ever crime),
+**Time resolution (network datasets).** `configureForDataset` chooses the coarsest bin that still
+gives a usable series: month (≥ 24 months), week (≥ 26 weeks), day (≥ 30 days), hour (≥ 24 h),
+otherwise minute; for day/hour/minute bins the causal rolling baseline is used (the seasonal rule
+needs years of monthly data) and dynamic-graph windows are about eight equal windows [NET; CFG].
+A CTU-13 scenario (hours) is analysed in minute or hour bins. The rest of this subsection
+describes the case study's monthly series.
+
+**System series (case study).** Monthly crimes, active offenders, new offenders (first-ever crime),
 co-offending share and mean group size over 2014-01 to 2020-08 (exclusive end 2020-09-01), i.e. 80
 monthly bins [MET §4; CFG]. 2010–2013 (91 rows) are excluded as too sparse, and September 2020 as
 incomplete and right-censored [MET §4; CFG].
@@ -620,8 +753,18 @@ behaviour is normal" [XAI].
 
 ### 4.10 Evaluation protocol
 
-No ground truth exists in the artifact and none is fabricated; therefore no precision, recall or
-ROC claims about real offender records are made [EVA; CARD]. The experiments are [EXP]:
+**With published labels (network datasets).** The detectors are unsupervised and never see the
+labels. After scoring, `evaluateGroundTruth` measures for each detector ROC-AUC, average precision
+(AP) with its chance level (the positive rate), and precision and recall at k = number of
+malicious scored hosts, in two settings: *known_only* (hosts with verified labels) and
+*unknown_as_benign* (unlabelled hosts counted as negatives, conservative for precision). Malicious
+hosts below the eligibility threshold are counted as `malicious_not_scored`, not hidden. E11
+repeats this for every feature-group set of the ablation, which answers RQ1–RQ3 with real labels
+instead of synthetic injections only [RUNEXP; NET].
+
+**Without labels (case study).** No ground truth exists in the burglary artifact and none is
+fabricated; therefore no precision, recall or ROC claims about real offender records are made
+[EVA; CARD]. The experiments are [EXP]:
 
 | ID | Question | Design |
 |---|---|---|
@@ -635,6 +778,7 @@ ROC claims about real offender records are made [EVA; CARD]. The experiments are
 | E8 | How sensitive are results? | seeds 1–10; NumLearners 50–400; NumObservationsPerLearner 64–512; min_events 2/3/5; budget 0.5–5 % |
 | E9 | Runtime and memory | per-stage timings; bundle size |
 | E10 | Can users interpret the system? | task-based usability study with 5–8 participants and SUS |
+| E11 | How well does the ranking find the labelled malicious hosts, and which feature groups matter? | published labels joined after scoring; every ablation set × detector × setting; ROC-AUC, AP vs chance, precision@k |
 
 Activity, spatial and co-offending injections run in the same synthetic grid and are reported
 without separate numbers [EXP].
@@ -1043,6 +1187,25 @@ T2 rubric: explanations with ≥ 2 concrete deviations `[PENDING STUDY]`; explan
 language `[PENDING STUDY]`. Per-participant SUS strip plot: `[PENDING STUDY]`.
 `[PENDING STUDY — do not fill by hand]`
 
+### 6.10b E11 — Detection against published labels (network datasets)
+
+**Produced by** `runExperiments` → `E11_ground_truth_by_feature_set.csv`; the full-model rows also
+in `outputs/datasets/<id>/tables/ground_truth_evaluation.csv` and in the app's "Ground truth" tab
+[RUNEXP; PIPE].
+
+| Dataset | Feature set | Detector | Setting | n scored | n malicious | ROC-AUC | AP | chance AP | P@k | malicious not scored |
+|---|---|---|---|---|---|---|---|---|---|---|
+| CTU-13 `[scenario]` | full | baseline | known_only | `[PENDING DOWNLOAD + MATLAB RUN — do not fill by hand]` | | | | | | |
+| CTU-13 `[scenario]` | full | Isolation Forest | known_only | `[PENDING]` | | | | | | |
+| CTU-13 `[scenario]` | network | both | known_only | `[PENDING]` | | | | | | |
+| CTU-13 `[scenario]` | full | both | unknown_as_benign | `[PENDING]` | | | | | | |
+| CIC-IDS2017 / UNSW-NB15 (optional) | full | both | known_only | `[PENDING]` | | | | | | |
+
+Interpretation rule: an AP clearly above its chance level means the unsupervised ranking places
+labelled malicious hosts near the top; a CTU-13 scenario usually contains only one or a few
+infected hosts, so precision at k is coarse and AP/ROC-AUC with their counts must be reported
+together.
+
 ### 6.11 Supporting real-data analyses (not numbered experiments)
 
 **Produced by** the pipeline [PIPE; RUNEXP; FIG]:
@@ -1071,11 +1234,15 @@ Frequent and rare trigrams: `[PENDING MATLAB RUN — do not fill by hand]`.
 ## 7 Discussion
 
 All statements in this section are conditional: they define what a result would mean, not what the
-result is. They are to be rewritten once Section 6 is filled.
+result is. They are to be rewritten once Section 6 is filled. For the network datasets each RQ is
+answered first with E11 (real labels) and then with E4–E8; synthetic results support but never
+replace labelled evidence.
 
 ### 7.1 RQ1 — Which features separate baseline from anomalous behaviour?
 
-*Evidence:* E2/E3 dominant groups, E4 ranking consistency, E5–E7 per-group sensitivity.
+*Evidence (network):* E11 — AP and ROC-AUC of each single-group set (e.g. `network` alone vs
+`graph` alone) against the labels. *Evidence (all):* E2/E3 dominant groups, E4 ranking
+consistency, E5–E7 per-group sensitivity.
 *Supporting pattern:* one or few groups appear as dominant among flagged entities **and** a
 ranking built from those groups alone is highly consistent with the full model (E4). *Weakening
 pattern:* dominant groups are spread evenly and no single-group set reproduces the full ranking,
@@ -1085,7 +1252,9 @@ groups share their source, so their joint prominence counts as one signal, not t
 
 ### 7.2 RQ2 — Does temporal context improve detection over static network features?
 
-*Evidence:* E5 (synthetic temporal injection) across feature sets; E4 rows `activity+temporal` and
+*Evidence (network):* E11 rows with and without the temporal group; `beacon_cv_min` is a
+temporal-regularity feature inside the network group and is reported separately in the evidence
+tables. *Evidence (all):* E5 (synthetic temporal injection) across feature sets; E4 rows `activity+temporal` and
 `activity+temporal+graph` vs `graph`/`cooffending`.
 *Supporting pattern:* sets containing the temporal group detect temporal injections clearly above
 chance AP (0.01), while static-only sets (graph, co-offending) stay near chance; on real data,
@@ -1097,7 +1266,7 @@ detection degrades without it, and whether the full set dilutes the signal.
 
 ### 7.3 RQ3 — Does combining node-level and edge-level features improve detection?
 
-*Evidence:* E4 and E6. In this design, edge-level information enters as node-level aggregates of
+*Evidence (network):* E11 `network+graph` vs `network` vs `graph`. *Evidence (all):* E4 and E6. In this design, edge-level information enters as node-level aggregates of
 tie attributes (`strength`, `max_tie_weight`, `repeat_partner_fraction`, `new_partner_rate`) and
 as relation-level outputs (recurring pairs, tie first/last dates, dynamic ties); there is no
 separate edge-level detector. *Supporting pattern:* the full set detects graph injections at least
@@ -1164,7 +1333,9 @@ Centrality is never described as "leadership" or "importance" [ETH §4].
 
 ### 8.4 Privacy
 
-Pseudonymous identifiers only; no re-identification, no external joins, no de-normalized
+Network datasets: IP addresses and computer names are pseudonymized on import and never stored in
+the flow table, bundle, reports or figures; the address map is written only on request, outside
+the bundle and git-ignored [NET]. Case study: pseudonymous identifiers only; no re-identification, no external joins, no de-normalized
 coordinates, no basemap; spatial views labelled "normalized"; reports contain aggregates or
 pseudonyms only; raw data not committed; report figures produced by the figure script without
 identifier labels [ETH §5].
@@ -1183,13 +1354,18 @@ identifier labels [ETH §5].
 | Derived event alphabet | sequences describe partner novelty and movement, not crime type | stated wherever shown |
 | Transductive scoring | scores are relative to this dataset | temporal hold-out is future work |
 | No labels | no accuracy claims | synthetic injection + stability, labelled |
+| Network: benchmark captures, partly synthetic (UNSW-NB15, CIC-IDS2017) | results do not transfer to other networks | stated with every number |
+| Network: most CTU-13 traffic unlabelled | precision can only be bounded | known_only and unknown_as_benign reported |
+| Network: label errors (CIC-IDS2017) | evaluation noise | CTU-13 primary; CIC secondary |
+| Network: layouts of CIC/UNSW/LANL verified from documentation only | first import may need fixes | content checks; profile `verified` notes |
 | Not yet executed in MATLAB | no result is verified | Appendix A gate |
 
 Sources: [ETH §6; TMP; MET §4; README].
 
 ### 8.6 Responsible demonstration
 
-Say "unusual record pattern", not "suspect"; show the evidence tab whenever showing a score;
+Say "unusual traffic pattern of host ENT…", not "attacker" or "infected"; say "the published
+label of this host is …" only after showing the score and evidence; say "unusual record pattern", not "suspect"; show the evidence tab whenever showing a score;
 mention the eligibility rule and the review budget; no raw identifiers on slides [ETH §7].
 
 ---
@@ -1219,6 +1395,10 @@ must be presented as an inspection aid only.
 - Additional detectors only if E5–E8 reveal systematic blind spots [ANO].
 - Exact assignment transcription (T-001) and alignment of the report with it.
 - Turkish version of the final report.
+- All thirteen CTU-13 scenarios and a cross-dataset comparison (train-free, so directly
+  comparable); a temporal hold-out within a capture.
+- Dataset-specific features where documented (e.g. CIC-IDS2017 flow statistics) — only after E11
+  shows which generic features fail.
 
 ---
 
@@ -1227,7 +1407,23 @@ must be presented as an inspection aid only.
 Entries are copied from docs/SOURCE_INDEX.md. Entries marked **(m — to verify)** are standard
 references cited from memory and must be checked before final submission [SI].
 
-**Dataset**
+**Network datasets** (m — to verify bibliographic details before submission)
+
+- García, S., Grill, M., Stiborek, J., & Zunino, A. (2014). An empirical comparison of botnet
+  detection methods. *Computers & Security*, 45, 100–123. Dataset: https://stratosphereips.org/datasets-ctu13
+- Sharafaldin, I., Habibi Lashkari, A., & Ghorbani, A. A. (2018). Toward generating a new intrusion
+  detection dataset and intrusion traffic characterization. *Proc. ICISSP 2018*, 108–116.
+  Dataset: https://www.unb.ca/cic/datasets/ids-2017.html
+- Moustafa, N., & Slay, J. (2015). UNSW-NB15: a comprehensive data set for network intrusion
+  detection systems. *Proc. MilCIS 2015*. Dataset: https://research.unsw.edu.au/projects/unsw-nb15-dataset
+- Kent, A. D. (2015). *Comprehensive, Multi-Source Cyber-Security Events*. Los Alamos National
+  Laboratory. https://csr.lanl.gov/data/cyber1/
+- Engelen, G., Rimmer, V., & Joosen, W. (2021). Troubleshooting an intrusion detection dataset: the
+  CICIDS2017 case study. *IEEE Security and Privacy Workshops (SPW)*.
+- CICIDS2017 flow-error study (2022), SciTePress, https://www.scitepress.org/Papers/2022/107740/107740.pdf
+  (authors and title to be copied from the paper).
+
+**Case-study dataset**
 
 - Ahmadi, Z., Nguyen, H. H., Zhang, Z., Bozhkov, D., Kudenko, D., Jofre, M., Calderoni, F.,
   Cohen, N., & Solewicz, Y. (2023). Inductive and transductive link prediction for criminal

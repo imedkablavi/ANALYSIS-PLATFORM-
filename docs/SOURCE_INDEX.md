@@ -10,6 +10,16 @@ standard reference cited from memory, to be double-checked before final submissi
 2. Dataset documentation: https://github.com/erichoang/criminal-network-visualization/blob/main/datasets/preprocessed/README.md — anonymization and min-max scaling statement.
 3. Ahmadi, Z., Nguyen, H. H., Zhang, Z., Bozhkov, D., Kudenko, D., Jofre, M., Calderoni, F., Cohen, N., & Solewicz, Y. (2023). Inductive and transductive link prediction for criminal network analysis. *Journal of Computational Science*, 72, 102063. https://doi.org/10.1016/j.jocs.2023.102063 — required dataset citation.
 
+## Network-traffic datasets (added 2026-10-20; (m) = details to verify)
+
+4. García, S., Grill, M., Stiborek, J., & Zunino, A. (2014). An empirical comparison of botnet detection methods. *Computers & Security*, 45, 100–123. (m) — CTU-13 dataset and its label semantics (Botnet / Normal / Background); dataset page https://stratosphereips.org/datasets-ctu13 (CC BY).
+5. Sharafaldin, I., Habibi Lashkari, A., & Ghorbani, A. A. (2018). Toward generating a new intrusion detection dataset and intrusion traffic characterization. *ICISSP 2018*. (m) — CIC-IDS2017; https://www.unb.ca/cic/datasets/ids-2017.html
+6. Moustafa, N., & Slay, J. (2015). UNSW-NB15: a comprehensive data set for network intrusion detection systems. *MilCIS 2015*. (m) — UNSW-NB15; https://research.unsw.edu.au/projects/unsw-nb15-dataset
+6a. Kent, A. D. (2015). Comprehensive, Multi-Source Cyber-Security Events. Los Alamos National Laboratory. https://csr.lanl.gov/data/cyber1/ (m) — LANL auth/flows/red team.
+6b. Engelen, G., Rimmer, V., & Joosen, W. (2021). Troubleshooting an intrusion detection dataset: the CICIDS2017 case study. *IEEE SPW*. (m) — known CIC-IDS2017 label/feature errors.
+6c. CICIDS2017 flow-error study, SciTePress 2022: https://www.scitepress.org/Papers/2022/107740/107740.pdf (found 2026-10-20; authors/title to copy) — same.
+6d. Stratosphere Lab, StratosphereLinuxIPS test captures (`dataset/test2-malicious.binetflow`, `test5-mixed.binetflow`) — used only to verify the binetflow header and value formats and as a reference sanity check (scripts/reference/network_flow_reference.py); not analysed as project data.
+
 ## MATLAB documentation
 
 4. App Designer: https://www.mathworks.com/help/matlab/ref/appdesigner.html — UI component family.

@@ -2,8 +2,16 @@
 
 ## Ground truth
 
-**None exists** in the artifact, and none is fabricated. Consequently, no precision/recall/ROC
-claims about real offenders are possible.
+**Network datasets (CTU-13, CIC-IDS2017, UNSW-NB15, LANL)** carry published labels. They are
+converted to host labels (`networkGroundTruth`: malicious / benign / unknown) and used **only after
+scoring** to measure ROC-AUC, average precision against its chance level and precision/recall at
+k (E11, docs/NETWORK_DATASETS.md). Unlabelled hosts (CTU-13 Background) are never treated as
+verified benign: results are reported for known-label hosts and, separately, with unknown hosts
+as negatives. Benchmark labels say how a ranking behaves on these captures; they do not make a
+score a verdict about a host.
+
+**Burglary case study:** none exists in the artifact, and none is fabricated. Consequently, no
+precision/recall/ROC claims about real offenders are possible.
 
 ## What is evaluated instead
 
