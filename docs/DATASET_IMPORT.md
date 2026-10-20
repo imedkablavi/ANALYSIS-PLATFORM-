@@ -27,6 +27,7 @@ re-analysing the same file replaces its entry instead of duplicating it.
 |---|---|---|---|---|
 | `event_csv` | one row per (entity, event) participation | entity, time | event id (missing → one event per row), x/lon, y/lat | incident/case logs, co-authorship, check-ins |
 | `edge_csv` | one row per interaction between two entities | source, target, time | weight (ignored, see below) | SNAP temporal networks (`src dst unixtime`), message/e-mail logs |
+| `network_flow` | a known network-traffic layout: CTU-13, CIC-IDS2017, UNSW-NB15, LANL | detected automatically | `labels_file`, `max_rows`, `profile` | **see docs/NETWORK_DATASETS.md** |
 | `networkx_burglary_json` | the primary artifact's schema | — | — | primary dataset |
 
 Delimiters are detected automatically (comma, semicolon, tab, space); leading lines starting
@@ -54,6 +55,9 @@ milliseconds; smaller values are ambiguous and raise `MOSAIC:AmbiguousTimeUnit` 
 | Relations | derived from shared events (`buildRelationTable`) | link-related validation checks are reported "not applicable" |
 
 ## Automatic configuration (`configureForDataset`)
+
+Bins: month (span ≥ 24 months), week (≥ 26 weeks), day (≥ 30 days), hour (≥ 24 h), otherwise
+minute. The paragraph below describes the month/week case.
 
 The primary artifact keeps its documented configuration. For other datasets the windows are
 derived from the data: monthly series from the first to the last month (last, partial month

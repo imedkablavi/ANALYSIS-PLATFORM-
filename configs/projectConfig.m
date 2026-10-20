@@ -8,7 +8,7 @@ function cfg = projectConfig()
 
 cfg.project.name = "Network Behavioral Analysis Platform";
 cfg.project.version = "0.2.0";
-cfg.project.feature_version = "F2";   % bump when feature definitions change
+cfg.project.feature_version = "F3";   % bump when feature definitions change
 
 % --- Data ---------------------------------------------------------------
 cfg.data.primary_file = fullfile("data","raw", ...
@@ -62,7 +62,8 @@ cfg.sequence.min_ngram_support = 5;
 cfg.analysis.random_seed = 42;
 cfg.anomaly.min_events = 3;            % eligibility: >= 2 inter-event gaps
 cfg.anomaly.feature_groups = ["activity","temporal","spatial", ...
-    "cooffending","graph","sequence"];
+    "cooffending","graph","sequence","network"];   % "network": traffic datasets only
+cfg.network.beacon_min_flows = 4;      % flows per host pair for beacon_cv_min
 cfg.anomaly.method = "isolation_forest";
 cfg.anomaly.iforest.num_learners = 200;
 cfg.anomaly.iforest.num_observations_per_learner = 256; % Liu et al. (2008)

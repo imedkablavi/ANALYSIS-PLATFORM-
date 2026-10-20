@@ -66,4 +66,5 @@ GitHub issue numbers in brackets (imedkablavi/ANALYSIS-PLATFORM-).
 | T-064 Final presentation [#12] | ⏳ | |
 | T-065 Repository cleanup and release [#12] | ⏳ | |
 | T-067 External dataset import (event CSV, temporal edge list) | 🔶 | `analyzeDataset`, catalog, app "Open dataset…"; docs/DATASET_IMPORT.md |
+| T-068 Network-traffic datasets (CTU-13, CIC-IDS2017, UNSW-NB15, LANL): profiles, labels, host features, ground-truth evaluation, minute/hour/day bins | 🔶 | code + tests; real files not yet analysed (download blocked here); docs/NETWORK_DATASETS.md |
 | T-066 Usability study (E10) | 🔶 | kit ready; sessions not yet run — protocol docs/USABILITY_STUDY.md, forms docs/usability/, scoring `scoreSUS`/`summarizeUsabilityLog` |

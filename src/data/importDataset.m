@@ -18,6 +18,8 @@ function ds = importDataset(path, opts)
 %                   buildCanonicalDataset); the primary artifact is already
 %                   pseudonymized by its provider
 %     keep_id_map   default false
+%     profile       network_flow: force a networkFlowProfiles id
+%     max_rows, labels_file   network_flow options (importNetworkFlows)
 %     date_format   primary JSON date format (default from projectConfig)
 %
 %   ds.meta always contains: id (name slug + first 8 hex of the Git blob
@@ -119,6 +121,13 @@ switch fmt
             meta.import_notes(end+1,1) = "Event participation rows; " + tNote + ".";
             ds = buildCanonicalDataset(ent, ev, t, x, y, meta, canon);
         end
+
+    case "network_flow"
+        profileId = string(cfgGet(opts, "profile", cfgGet(info, "profile", "")));
+        if profileId == ""
+            error("MOSAIC:UnknownProfile", "network_flow needs a profile (see networkFlowProfiles).");
+        end
+        ds = importNetworkFlows(path, profileId, meta, opts);
 
     otherwise
         error("MOSAIC:UnsupportedFormat", "Unsupported dataset format: %s. %s", fmt, info.message);

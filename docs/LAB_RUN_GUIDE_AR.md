@@ -68,6 +68,17 @@ run scripts/run_experiments.m
 run scripts/generate_report_figures.m
 ```
 
+## 7ب. بيانات الشبكات (مهم: موضوع المشروع)
+الكمبيوتر في الجامعة يستطيع غالبًا الوصول لمواقع التنزيل:
+1. من `https://stratosphereips.org/datasets-ctu13` نزّل ملف `.binetflow` لسيناريو واحد (مثلًا السيناريو 1 أو 9).
+2. ضعه في `data\external\` داخل مجلد المشروع.
+3. شغّل:
+   ```matlab
+   b = analyzeDataset("data/external/<اسم الملف>.binetflow")
+   ```
+4. إن نجح: سترى في `outputs\datasets\...\tables\ground_truth_evaluation.csv` مدى دقة الكشف مقارنة بالتصنيف المنشور.
+5. إن كان الملف كبيرًا جدًا أو بطيئًا: أضف `struct('max_rows', 500000)` كوسيط ثانٍ.
+
 ## 8. التطبيق
 ```matlab
 run scripts/launch_app.m

@@ -109,7 +109,7 @@ axis(ax, 'off');
 ttl = sprintf('%s within %d hops (%d %s, %d ties)', ds.network_label, ...
     hops, numnodes(H), ds.entity_plural, nnz(~future));
 if ~isnat(cutoffTime)
-    ttl = sprintf('%s — ties formed before %s', ttl, string(cutoffTime, 'yyyy-MM'));
+    ttl = sprintf('%s — ties formed before %s', ttl, string(cutoffTime, ds.time_format));
 end
 title(ax, ttl, 'Color', th.color.text, 'FontWeight', 'normal');
 info.nodes = cand;

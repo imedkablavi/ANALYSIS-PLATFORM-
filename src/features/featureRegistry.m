@@ -4,6 +4,8 @@ function reg = featureRegistry()
 %   REG = FEATUREREGISTRY() returns a table with one row per feature:
 %     name        column name in the entity feature table
 %     group       activity | temporal | spatial | cooffending | graph | sequence
+%                 | network (network-traffic datasets only: computeNetworkFeatures;
+%                 absent columns are skipped by prepareFeatureMatrix)
 %     transform   "log1p" for heavy-tailed non-negative counts, "none" otherwise
 %     min_events  minimum events for the feature to be defined
 %     label       short human-readable label (used in explanations and UI)
@@ -44,6 +46,18 @@ rows = {
 "seq_surprisal_mean",     "sequence",    "none",  2, "mean sequence surprise (bits)",        "mean -log2 P(token_t | token_t-1) under the global Markov model",            "derived tokens"
 "seq_surprisal_max",      "sequence",    "none",  2, "rarest transition (bits)",             "max -log2 P(token_t | token_t-1)",                                          "derived tokens"
 "new_partner_rate",       "sequence",    "none",  1, "share of crimes with a new partner",   "fraction of the offender's crimes involving a previously unseen partner",   "crime_details (order)"
+"out_flows",              "network",     "log1p", 1, "outgoing flows",                       "flows the host initiated (source)",                                         "flows"
+"in_flows",               "network",     "log1p", 1, "incoming flows",                       "flows the host received (destination), self-flows excluded",                "flows"
+"out_share",              "network",     "none",  1, "share of flows it initiated",          "out_flows / (out_flows + in_flows)",                                        "flows"
+"distinct_dst",           "network",     "log1p", 1, "distinct destinations (fan-out)",      "number of distinct destination hosts of outgoing flows",                    "flows"
+"distinct_src_in",        "network",     "log1p", 1, "distinct sources (fan-in)",            "number of distinct source hosts of incoming flows",                         "flows"
+"distinct_dport",         "network",     "log1p", 1, "distinct destination ports",           "number of distinct destination ports of outgoing flows",                    "flows dport"
+"dport_entropy",          "network",     "none",  2, "destination-port entropy (bits)",      "Shannon entropy of the destination-port distribution of outgoing flows",    "flows dport"
+"median_bytes_out",       "network",     "log1p", 1, "median bytes per outgoing flow",       "median bytes of outgoing flows",                                            "flows bytes"
+"median_duration_out",    "network",     "log1p", 1, "median outgoing duration (s)",         "median duration of outgoing flows",                                         "flows duration"
+"small_flow_fraction",    "network",     "none",  1, "share of tiny outgoing flows",         "outgoing flows with <= 2 packets / outgoing flows (scans, unanswered attempts)", "flows packets"
+"failed_fraction",        "network",     "none",  1, "share of failed attempts",             "failed / outgoing authentication attempts",                                 "auth outcome"
+"beacon_cv_min",          "network",     "none",  4, "most regular repeated connection (gap CV)", "min over destinations with >= 4 flows of std(gaps)/mean(gaps); ~0 = clock-like (beaconing)", "flows time"
 };
 
 reg = cell2table(rows, 'VariableNames', ...

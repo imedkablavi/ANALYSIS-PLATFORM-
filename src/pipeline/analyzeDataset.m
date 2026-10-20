@@ -17,6 +17,8 @@ function bundle = analyzeDataset(path, opts)
 %     progress     @(fraction, message) callback (app progress dialog)
 %     use_iforest  default true when the toolbox is available
 %     time_unit, pseudonymize, keep_id_map   passed to importDataset
+%     profile, max_rows, labels_file         network traffic (importNetworkFlows,
+%                                            docs/NETWORK_DATASETS.md)
 %     allow_invalid  continue despite error-level validation findings
 %
 %   Imported datasets are pseudonymized and their coordinates min-max
@@ -48,7 +50,8 @@ end
 % importDataset merges opts.mapping over the detected mapping and reuses
 % this inspection instead of reading the file again.
 importOpts = struct('info', info);
-for f = ["mapping","name","time_unit","pseudonymize","keep_id_map"]
+for f = ["mapping","name","time_unit","pseudonymize","keep_id_map", ...
+        "profile","max_rows","labels_file"]
     if isfield(opts, char(f))
         importOpts.(char(f)) = opts.(char(f));
     end
@@ -58,8 +61,11 @@ ds = importDataset(path, importOpts);
 
 cfg = projectConfig();
 [cfg, notes] = configureForDataset(cfg, ds);
-if ds.meta.format ~= "networkx_burglary_json"
-    cfg.labels.entities = "entities";   % wording of evidence texts
+if ds.meta.format == "network_flow"
+    cfg.labels.entities = "hosts";      % wording of evidence texts
+    cfg.labels.events = "flows";
+elseif ds.meta.format ~= "networkx_burglary_json"
+    cfg.labels.entities = "entities";
     cfg.labels.events = "events";
 end
 id = ds.meta.id;

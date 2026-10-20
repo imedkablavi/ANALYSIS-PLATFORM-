@@ -2,6 +2,11 @@
 
 ## Unreleased — post-audit hardening
 
+- Scope: computer-network traffic (owner decision 2026-10-20). New `network_flow` format with profiles for CTU-13 (binetflow), CIC-IDS2017 (GeneratedLabelledFlows), UNSW-NB15 (headered and the headerless 49-column files) and LANL (auth + redteam, flows); detection with content checks; `max_rows`; host pseudonymization; flow table without addresses (docs/NETWORK_DATASETS.md).
+- Published labels → host ground truth (`labelNetworkFlows`, `networkGroundTruth`) and detector evaluation (`evaluateGroundTruth`: ROC-AUC, AP vs chance, precision/recall@k, known-only and unknown-as-benign); labels never reach features. App "Ground truth" tab.
+- Feature version F3: 12 host traffic features (group `network`, incl. port entropy, fan-out/in, tiny-flow share, failed attempts, beaconing CV); palette slot 7 (validated).
+- Temporal bins day/hour/minute (`binStep`), automatic choice by span; equal dynamic-graph windows for short captures; playback window in bins; mixed timestamp formats parsed completely; pair keys no longer limited to 1e6 entities.
+- Python reference `scripts/reference/network_flow_reference.py`; tests `tests/test_network_datasets.m`.
 - App redesign: shared theme (`appTheme`, WCAG-checked text contrast, single-hue score ramp), KPI tiles, ranking filters/search, themed plots, empty-state messages, datasets without coordinates.
 - App dataset UI: "Open dataset…" (format detection, column-mapping dialog, progress dialog) and a dataset list fed by `listDatasets`; new tests in `tests/test_visualization_theme.m`.
 - Replay, timeline legend and KPI tile follow the dataset's temporal bin (weekly bins for short imported datasets advanced the replay cursor by a month before).

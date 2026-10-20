@@ -1,7 +1,7 @@
 # Feature Engineering
 
 **Single source of truth:** `src/features/featureRegistry.m` (name, group, transform, minimum
-events, label, formula, source fields). This table mirrors it; feature version `F2`
+events, label, formula, source fields). This table mirrors it; feature version `F3`
 (`cfg.project.feature_version`).
 
 Notation: an offender with k crimes at dates t₁ ≤ … ≤ t_k (days), gaps g_i = t_{i+1} − t_i,
@@ -40,6 +40,27 @@ sites p_i = (x_i, y_i) in normalized units, group sizes n_i = `num_of_offenders`
 | `new_partner_rate` | sequence | 1 | – | share of crimes with ≥ 1 previously unseen partner |
 
 `component_id` is stored for navigation but is not a model feature.
+
+### Network-traffic features (group `network`, version F3)
+
+Computed only for network datasets (`computeNetworkFeatures`; docs/NETWORK_DATASETS.md);
+absent columns are skipped, so the burglary analysis is unchanged. Outgoing = flows the host
+initiated; ports/bytes/packets/outcome may be missing in a dataset, the feature is then NaN and
+dropped as constant/empty.
+
+| Feature | min | Transform | Formula |
+|---|---|---|---|
+| `out_flows` / `in_flows` | 1 | log1p | flows initiated / received (self-flows not counted twice) |
+| `out_share` | 1 | – | out / (out + in) |
+| `distinct_dst` / `distinct_src_in` | 1 | log1p | distinct destination / source hosts (fan-out / fan-in) |
+| `distinct_dport` | 1 | log1p | distinct destination ports of outgoing flows |
+| `dport_entropy` | 2 | – | −Σ p log₂ p over destination ports (NaN with < 2 flows with a port) |
+| `median_bytes_out`, `median_duration_out` | 1 | log1p | medians over outgoing flows |
+| `small_flow_fraction` | 1 | – | outgoing flows with ≤ 2 packets / outgoing |
+| `failed_fraction` | 1 | – | failed / outgoing authentications (LANL) |
+| `beacon_cv_min` | 4 | – | min over destinations with ≥ 4 flows of std(gaps)/mean(gaps) between flow starts; ≈ 0 = periodic |
+
+Leakage: the label columns of `ds.flows` are never read by any feature function.
 
 ## Decisions
 

@@ -1,4 +1,4 @@
-function ds = buildCanonicalDataset(entityRaw, eventRaw, t, x, y, meta, opts)
+function [ds, rowEntity, rowEvent] = buildCanonicalDataset(entityRaw, eventRaw, t, x, y, meta, opts)
 %BUILDCANONICALDATASET Participation records -> the pipeline's dataset contract.
 %
 %   DS = BUILDCANONICALDATASET(ENTITYRAW, EVENTRAW, T, X, Y, META, OPTS)
@@ -23,6 +23,11 @@ function ds = buildCanonicalDataset(entityRaw, eventRaw, t, x, y, meta, opts)
 %                        appearance. The original IDs never enter the bundle.
 %   OPTS.keep_id_map     default false: if true, ds.private.entity_map holds
 %                        the mapping (saved separately, never in reports)
+%
+%   ROWENTITY, ROWEVENT (optional outputs): entity and event index of every
+%   INPUT row (NaN for dropped rows), so a caller can attach per-row
+%   attributes (e.g. network flow sizes) to pseudonymized entities without
+%   keeping the original identifiers.
 %
 %   Documented transformations (recorded in ds.meta.import_notes, never
 %   silent):
@@ -57,6 +62,7 @@ eventRaw(ismissing(eventRaw)) = "";
 entityRaw = strtrim(entityRaw);
 eventRaw = strtrim(eventRaw);
 drop = entityRaw == "";
+kept = find(~drop);
 if any(drop)
     notes(end+1,1) = sprintf("%d rows without an entity id were dropped.", nnz(drop));
     entityRaw = entityRaw(~drop); eventRaw = eventRaw(~drop);
@@ -77,6 +83,10 @@ uEv = uEv(:);
 k = nnz(noEvent);
 evIdx(noEvent) = numel(uEv) + (1:k)';
 uEv = [uEv; "(no event id, row " + string(find(noEvent)) + ")"];
+rowEntity = NaN(n, 1);
+rowEvent = NaN(n, 1);
+rowEntity(kept) = entIdx;
+rowEvent(kept) = evIdx;
 if pseudo
     entityIds = "ENT" + compose("%06d", (1:numel(uEnt))');
     eventIds = "EV" + compose("%07d", (1:numel(uEv))');

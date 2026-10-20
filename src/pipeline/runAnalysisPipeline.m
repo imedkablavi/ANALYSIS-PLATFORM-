@@ -79,6 +79,10 @@ datasetMeta = struct();
 if isfield(data, "meta")
     datasetMeta = data.meta;
 end
+flows = table();
+if isfield(data, "flows")
+    flows = data.flows;   % network traffic (importNetworkFlows)
+end
 clear data   % drop the imported dataset as early as possible
 
 clk = tic;
@@ -107,7 +111,15 @@ ngrams = mineSequenceNgrams(tokens, cfgGet(cfg, "sequence.ngram_n", 3), ...
     cfgGet(cfg, "sequence.min_ngram_support", 5));
 timings.sequence = toc(clk);
 
-features = mergeFeatureTables(behavior, graphFeatures, seqFeatures);
+if height(flows) > 0
+    clk = tic;
+    stageNo = logStage(stageNo, progressFcn, "network traffic features");
+    networkFeatures = computeNetworkFeatures(flows, nEnt, cfg);
+    features = mergeFeatureTables(behavior, graphFeatures, seqFeatures, networkFeatures);
+    timings.network = toc(clk);
+else
+    features = mergeFeatureTables(behavior, graphFeatures, seqFeatures);
+end
 
 clk = tic;
 stageNo = logStage(stageNo, progressFcn, "temporal analysis");
@@ -182,9 +194,14 @@ clk = tic;
 stageNo = logStage(stageNo, progressFcn, "dynamic graph");
 % Yearly windows, but the last one is cut at series_end: data after it are
 % incomplete and right-censored (solved cases). Shortened windows are
-% flagged as partial in the output.
-windowStarts = datetime([years; years(end)+1], 1, 1);
-windowStarts(end) = min(windowStarts(end), cfg.temporal.series_end);
+% flagged as partial in the output. Short captures (hour/minute bins) use
+% the equal windows set by configureForDataset instead.
+if ~isempty(cfgGet(cfg, "temporal.snapshot_starts", datetime.empty(0, 1)))
+    windowStarts = cfg.temporal.snapshot_starts(:);
+else
+    windowStarts = datetime([years; years(end)+1], 1, 1);
+    windowStarts(end) = min(windowStarts(end), cfg.temporal.series_end);
+end
 dynamicGraph = computeDynamicGraphStats(pairEvents, events, windowStarts);
 timings.dynamic_graph = toc(clk);
 
@@ -217,6 +234,17 @@ entities.baseline_flag = anomaly.baseline.flag;
 entities.iforest_score = anomaly.iforest.score;
 entities.iforest_rank = anomaly.iforest.rank;
 entities.iforest_flag = anomaly.iforest.flag;
+
+% Published labels (network datasets): evaluation only, after scoring.
+groundTruth = struct();
+if height(flows) > 0 && cfgGet(datasetMeta, "has_labels", false)
+    truth = networkGroundTruth(flows, nEnt);
+    groundTruth.entities = truth;
+    groundTruth.evaluation = evaluateGroundTruth(entities, truth);
+    groundTruth.note = "Published dataset labels, used only to evaluate the " + ...
+        "unsupervised detectors; never used as features.";
+    entities.truth = truth.truth;
+end
 
 datasetSha = cfg.data.expected_blob_sha;
 if isfield(datasetMeta, "sha")
@@ -259,6 +287,7 @@ bundle.dynamicGraph = dynamicGraph;
 bundle.patterns = patterns;
 bundle.anomaly = anomaly;
 bundle.explanations = explanations;
+bundle.ground_truth = groundTruth;
 
 if doSave
     clk = tic;
@@ -282,6 +311,9 @@ if doSave
     writetable(patterns.ngrams, fullfile(expDir, "sequence_ngrams.csv"));
     writetable(temporal.anomaly_comparison, ...
         fullfile(expDir, "temporal_anomaly_method_comparison.csv"));
+    if isfield(groundTruth, "evaluation")
+        writetable(groundTruth.evaluation, fullfile(expDir, "ground_truth_evaluation.csv"));
+    end
     bundle.meta.timings.save = toc(clk);
     writeTextFile(fullfile(expDir, "pipeline_run.json"), jsonencode(struct( ...
         'meta', rmfield(bundle.meta, {'graph','created','dataset'}), ...
@@ -297,8 +329,8 @@ end
 function out = datasetSummary(m)
 % JSON-safe dataset provenance for pipeline_run.json (no datetimes, no IDs).
 out = struct();
-for f = ["id","name","format","sha","n_rows","n_entities","n_events", ...
-        "has_coordinates","pseudonymized","links_provided"]
+for f = ["id","name","format","profile","sha","n_rows","n_entities","n_events", ...
+        "n_flows","has_coordinates","has_labels","pseudonymized","links_provided"]
     if isfield(m, char(f))
         out.(char(f)) = m.(char(f));
     end
@@ -309,11 +341,11 @@ end
 end
 
 function stageNo = logStage(stageNo, progressFcn, name)
-% Console log + optional progress callback (fraction of the 13 stages).
+% Console log + optional progress callback (fraction of the 14 stages).
 stageNo = stageNo + 1;
 fprintf("[pipeline] %s ...\n", name);
 if ~isempty(progressFcn)
-    progressFcn(min(stageNo / 13, 1), name);
+    progressFcn(min(stageNo / 14, 1), name);
 end
 end
 

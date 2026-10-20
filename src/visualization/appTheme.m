@@ -17,9 +17,10 @@ function t = appTheme()
 %     accent         #256abf   5.3:1 (white text on accent: 5.4:1)
 %     gridlines #e1e0d9 and borders are one step off the surface, solid.
 %
-%   Categorical: feature groups (bars, adjacent pairs). Slots 1-6 of the
+%   Categorical: feature groups (bars, adjacent pairs). Slots 1-7 of the
 %     reference palette in fixed order activity, temporal, spatial,
-%     cooffending, graph, sequence. Worst adjacent CVD dE 9.1 (target 8),
+%     cooffending, graph, sequence, network (violet #6250d6, slot 7;
+%     re-validated with all 7). Worst adjacent CVD dE 9.1 (target 8),
 %     normal-vision dE 19.6 (floor 15). Aqua, yellow and magenta are below
 %     3:1 on the surface, so the evidence chart always carries a legend
 %     and feature labels (relief rule). Colour follows the group name,
@@ -101,10 +102,12 @@ t.status.critical = hex("#d03b3b");
 t.status.icon = struct('good', "✓", 'warning', "!", 'critical', "✕");
 
 % Categorical palette of the six feature groups (fixed order).
-t.groups.names = ["activity", "temporal", "spatial", "cooffending", "graph", "sequence"];
-t.groups.labels = ["Activity", "Temporal", "Spatial", "Co-offending", "Graph", "Sequence"];
+t.groups.names = ["activity", "temporal", "spatial", "cooffending", "graph", ...
+    "sequence", "network"];
+t.groups.labels = ["Activity", "Temporal", "Spatial", "Co-offending", "Graph", ...
+    "Sequence", "Network traffic"];
 t.groups.colors = [hex("#2a78d6"); hex("#eb6834"); hex("#1baf7a"); ...
-    hex("#eda100"); hex("#e87ba4"); hex("#008300")];
+    hex("#eda100"); hex("#e87ba4"); hex("#008300"); hex("#6250d6")];
 names = t.groups.names;
 colors = t.groups.colors;
 other = hex("#898781");

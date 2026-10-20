@@ -8,6 +8,14 @@ Build a one-month university project that implements the professor's assigned ne
 
 The project focuses on detecting and explaining **observable suspicious/anomalous behavioral patterns** inside a network of interactions, events, communications, locations, or related entities. The exact wording of the assignment must remain the authoritative scope reference.
 
+## Scope decision 2026-10-20: computer-network traffic
+
+The project owner confirmed that "ağ tabanlı" means **computer-network traffic**. The target
+datasets are the labelled network-security datasets CTU-13, CIC-IDS2017, UNSW-NB15 and LANL
+(docs/NETWORK_DATASETS.md); they are read directly by the platform. The burglary artifact below
+remains supported as the first case study until a network dataset has been analysed in MATLAB;
+then the primary dataset, report and demo are switched (TASKS_FOR_ADMIN).
+
 ## Current verified primary artifact
 
 The selected upstream artifact is:

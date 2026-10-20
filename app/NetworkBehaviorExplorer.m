@@ -71,6 +71,7 @@ classdef NetworkBehaviorExplorer < handle
         PartnerTable
         PatternTable
         DetectorAxes
+        TruthTable
         QualityTable
         % Replay bar
         ResetButton
@@ -205,7 +206,12 @@ classdef NetworkBehaviorExplorer < handle
                 round(pt.partner_iforest_score, 3), 'VariableNames', ...
                 {'partner', 'shared_events', 'first', 'last', 'partner_score'});
             app.PartnerTable.UserData = pt.partner_index;
-            app.SelectionLabel.Text = "Selected: " + string(p.entity_id) + " (" + ctx.status + ")";
+            sel = "Selected: " + string(p.entity_id) + " (" + ctx.status + ")";
+            if ismember('truth', b.entities.Properties.VariableNames)
+                % Shown after scoring, for evaluation; the detectors never use it.
+                sel = sel + "  ·  published label: " + string(b.entities.truth(entityIndex));
+            end
+            app.SelectionLabel.Text = sel;
             app.highlightRankRow();
         end
 
@@ -219,10 +225,10 @@ classdef NetworkBehaviorExplorer < handle
             app.TimeSlider.Value = k;
             b = app.Bundle;
             tEnd = app.cursorTime();
-            frame = buildPlaybackFrame(b, tEnd, app.WindowSpinner.Value);
             ds = bundleDatasetInfo(b);
+            frame = buildPlaybackFrame(b, tEnd, app.WindowSpinner.Value * ds.bin_step);
             txt = sprintf("%s to %s  ·  %d %s, %d active ties, %d new ties", ...
-                string(frame.t0, 'yyyy-MM'), string(frame.t1 - days(1), 'yyyy-MM'), ...
+                string(frame.t0, ds.time_format), string(frame.t1 - seconds(1), ds.time_format), ...
                 numel(frame.crime_rows), ds.event_plural, height(frame.edges), ...
                 height(frame.new_edges));
             if frame.bin_is_anomalous
@@ -426,6 +432,9 @@ classdef NetworkBehaviorExplorer < handle
             app.styleTable(app.PatternTable);
             g6 = app.tabGrid("Detectors");
             app.DetectorAxes = app.themedAxes(g6);
+            g8 = app.tabGrid("Ground truth");
+            app.TruthTable = uitable(g8);
+            app.styleTable(app.TruthTable);
             g7 = app.tabGrid("Data quality");
             app.QualityTable = uitable(g7);
             app.styleTable(app.QualityTable);
@@ -455,8 +464,9 @@ classdef NetworkBehaviorExplorer < handle
             app.TimeSlider = uislider(r, 'Limits', [1 2], 'Value', 1, ...
                 'MajorTicks', [], 'MinorTicks', [], ...
                 'ValueChangedFcn', @(s, ~) app.setCursor(s.Value));
-            app.label(r, "Window (months)", th.font.base, th.color.textSecondary, 'normal');
-            app.WindowSpinner = uispinner(r, 'Limits', [1 36], 'Value', 12, ...
+            app.label(r, "Window (periods)", th.font.base, th.color.textSecondary, 'normal');
+            app.WindowSpinner = uispinner(r, 'Limits', [1 120], 'Value', 12, ...
+                'Tooltip', 'Window length in timeline bins (months, weeks, days, hours or minutes)', ...
                 'FontName', th.font.family, 'FontSize', th.font.base, ...
                 'ValueChangedFcn', @(~, ~) app.setCursor(app.CursorIndex));
             app.AudioBox = uicheckbox(r, 'Text', 'Audio cue', 'Value', false, ...
@@ -599,6 +609,20 @@ classdef NetworkBehaviorExplorer < handle
                 app.QualityTable.Data = table();
             end
             app.safePlot(app.DetectorAxes, @() plotScoreComparison(app.DetectorAxes, b));
+            if ds.has_labels
+                % Published labels: evaluation of the unsupervised detectors only.
+                ev = b.ground_truth.evaluation;
+                ev.roc_auc = round(ev.roc_auc, 3);
+                ev.average_precision = round(ev.average_precision, 3);
+                ev.chance_ap = round(ev.chance_ap, 3);
+                ev.precision_at_k = round(ev.precision_at_k, 3);
+                ev.recall_at_k = round(ev.recall_at_k, 3);
+                app.TruthTable.Data = ev;
+            else
+                app.TruthTable.Data = table("This dataset has no published labels: " + ...
+                    "results are deviations only, not verified detections.", ...
+                    'VariableNames', {'note'});
+            end
             app.fillRanking();
             app.safePlot(app.TimeAxes, @() plotActivityTimeline(app.TimeAxes, b, [], app.cursorTime()));
             app.safePlot(app.MapAxes, @() plotSpatialView(app.MapAxes, b, []));
@@ -810,7 +834,7 @@ classdef NetworkBehaviorExplorer < handle
 
         function [t0, t1] = window(app)
             t1 = app.cursorTime();
-            t0 = t1 - calmonths(app.WindowSpinner.Value);
+            t0 = t1 - app.WindowSpinner.Value * bundleDatasetInfo(app.Bundle).bin_step;
         end
 
         function togglePlay(app)

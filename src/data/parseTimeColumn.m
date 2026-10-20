@@ -1,4 +1,4 @@
-function [t, note] = parseTimeColumn(v, unit)
+function [t, note] = parseTimeColumn(v, unit, formats)
 %PARSETIMECOLUMN Convert an imported time column to an unzoned datetime column.
 %
 %   [T, NOTE] = PARSETIMECOLUMN(V, UNIT) accepts what readtable returns for
@@ -15,8 +15,12 @@ function [t, note] = parseTimeColumn(v, unit)
 %                                      so UNIT must be given explicitly
 %                      or explicitly "posix_s", "posix_ms", "excel",
 %                      "datenum", "yyyymmdd"
-%     text             parsed with datetime's format inference; if that
-%                      fails, a list of common formats is tried
+%     text             FORMATS (optional string array, e.g. from a dataset
+%                      profile) are tried first; otherwise datetime's format
+%                      inference; if that fails, common formats are applied
+%                      one after another, each filling only values still
+%                      unparsed (files mixing two layouts, a documented
+%                      CIC-IDS2017 issue, are read completely)
 %   Unparseable values become NaT; they are never dropped here, so the
 %   validation report (check V43) counts them. NOTE describes the
 %   interpretation for the import record.
@@ -24,6 +28,7 @@ function [t, note] = parseTimeColumn(v, unit)
 arguments
     v
     unit (1,1) string {mustBeMember(unit, ["auto","posix_s","posix_ms","excel","datenum","yyyymmdd"])} = "auto"
+    formats (1,:) string = strings(1,0)
 end
 
 if isdatetime(v)
@@ -77,29 +82,44 @@ if ~any(has)
     return;
 end
 note = "";
-try
-    t(has) = datetime(s(has));
-    note = "text time parsed with inferred format";
-catch
-    formats = ["yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd", ...
-        "dd.MM.yyyy HH:mm", "dd.MM.yyyy", "dd/MM/yyyy", "MM/dd/yyyy", "yyyy/MM/dd"];
-    best = 0;
+inferred = false;
+if isempty(formats)
+    try
+        t(has) = datetime(s(has));
+        note = "text time parsed with inferred format";
+        inferred = true;
+    catch
+        % fall through to the explicit formats
+    end
+end
+if ~inferred
+    if isempty(formats)
+        formats = ["yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd", ...
+            "yyyy/MM/dd HH:mm:ss.SSSSSS", "yyyy/MM/dd HH:mm:ss", "yyyy/MM/dd", ...
+            "dd/MM/yyyy HH:mm:ss", "dd/MM/yyyy HH:mm", "dd.MM.yyyy HH:mm", ...
+            "dd.MM.yyyy", "dd/MM/yyyy", "MM/dd/yyyy"];
+    end
+    used = strings(1,0);
     for f = formats
-        cand = NaT(numel(s), 1);
-        try
-            cand(has) = datetime(s(has), 'InputFormat', f);
-        catch
-            continue;
+        todo = has & isnat(t);
+        if ~any(todo)
+            break;
         end
-        ok = nnz(~isnat(cand));
-        if ok > best
-            best = ok;
-            t = cand;
-            note = "text time parsed with format " + f;
+        cand = NaT(nnz(todo), 1);
+        try
+            cand = datetime(s(todo), 'InputFormat', f);
+        catch
+            continue;   % format does not apply to these values
+        end
+        if any(~isnat(cand))
+            t(todo) = cand;
+            used(end+1) = f + " (" + nnz(~isnat(cand)) + ")"; %#ok<AGROW>
         end
     end
-    if best == 0
+    if isempty(used)
         note = "time column could not be parsed (all NaT)";
+    else
+        note = "text time parsed with format(s) " + joinStrings(used, ", ");
     end
 end
 t.TimeZone = '';

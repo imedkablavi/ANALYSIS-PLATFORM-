@@ -42,6 +42,10 @@ can be analysed end to end: `scripts/analyze_dataset.m` or the app's **Open data
 Identifiers are pseudonymized and coordinates scaled on import. Details:
 [docs/DATASET_IMPORT.md](docs/DATASET_IMPORT.md).
 
+**Network-traffic datasets** (the project's target domain): CTU-13, CIC-IDS2017, UNSW-NB15 and
+LANL files are recognised automatically; their published labels are used to evaluate the
+unsupervised detectors (never as features). See [docs/NETWORK_DATASETS.md](docs/NETWORK_DATASETS.md).
+
 Items that need the project owner's input are collected in [TASKS_FOR_ADMIN.md](TASKS_FOR_ADMIN.md).
 
 ## Pipeline

@@ -29,7 +29,10 @@ arguments
 end
 
 nW = numel(windowStarts) - 1;
-key = pairEvents.a_index * 1e6 + pairEvents.b_index;   % entity indices < 1e6
+% Pair key a*K+b with K > every index (exact in double up to K ~ 9e7;
+% network datasets can have more than a million hosts).
+K = max([pairEvents.a_index; pairEvents.b_index; 0]) + 1;
+key = pairEvents.a_index * K + pairEvents.b_index;
 [uKey, firstRow] = unique(key, 'first');   % pairEvents is sorted by time
 firstSeen = pairEvents.event_time(firstRow);
 
@@ -55,8 +58,8 @@ for w = 1:nW
 
     comps = 0; largest = 0; meanDeg = 0;
     if ~isempty(keys)
-        a = floor(keys / 1e6);
-        b = keys - a * 1e6;
+        a = floor(keys / K);
+        b = keys - a * K;
         [nodesW, ~, loc] = unique([a; b]);
         m = numel(keys);
         Gw = graph(loc(1:m), loc(m+1:end), 1, numel(nodesW));

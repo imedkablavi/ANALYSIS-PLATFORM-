@@ -2,7 +2,9 @@ function info = inspectDatasetFile(path)
 %INSPECTDATASETFILE Detect the format of a dataset file and propose a column mapping.
 %
 %   INFO = INSPECTDATASETFILE(PATH) returns
-%     format        "networkx_burglary_json" | "event_csv" | "edge_csv" | "unknown"
+%     format        "networkx_burglary_json" | "network_flow" | "event_csv" |
+%                   "edge_csv" | "unknown"
+%     profile       network_flow only: networkFlowProfiles id (else "")
 %     columns       string row of column names (empty for JSON)
 %     mapping       struct with string fields entity, event, time, x, y,
 %                   source, target, weight ("" = not detected)
@@ -14,6 +16,9 @@ function info = inspectDatasetFile(path)
 %   - event_csv: one row per (entity, event) participation; columns
 %     entity + time required, event id optional (missing = one event per row),
 %     x/y optional
+%   - network_flow: a known network-traffic layout (CTU-13, CIC-IDS2017,
+%     UNSW-NB15, LANL; networkFlowProfiles / matchNetworkProfile). Checked
+%     first, so a known layout is never read as a generic edge list.
 %   - edge_csv: one row per interaction between two entities with a time
 %     (temporal edge list, e.g. SNAP "src dst unixtime"); headerless files
 %     with >= 3 columns are read positionally as source, target, time.
@@ -22,7 +27,7 @@ arguments
     path (1,1) string
 end
 
-info = struct('format', "unknown", 'columns', strings(1,0), ...
+info = struct('format', "unknown", 'profile', "", 'columns', strings(1,0), ...
     'mapping', emptyMapping(), 'needs_mapping', true, 'message', "");
 if ~isfile(path)
     info.message = "File not found: " + path;
@@ -54,6 +59,15 @@ names = reshape(string(opts.VariableNames), 1, []);
 info.columns = names;
 low = lower(strtrim(names));
 m = emptyMapping();
+
+[p, ~, profileMsg] = matchNetworkProfile(path, names);
+if ~isempty(p)
+    info.format = "network_flow";
+    info.profile = p.id;
+    info.needs_mapping = false;
+    info.message = profileMsg;
+    return;
+end
 
 headerless = ~isempty(names) && all(startsWith(names, "Var"));
 if headerless

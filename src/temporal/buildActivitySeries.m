@@ -2,7 +2,7 @@ function series = buildActivitySeries(events, crimes, t0, t1, binUnit)
 %BUILDACTIVITYSERIES System-level activity time series.
 %
 %   SERIES = BUILDACTIVITYSERIES(EVENTS, CRIMES, T0, T1, BINUNIT) with
-%   BINUNIT "month" or "week"; only data in [T0, T1) are counted (T1 exclusive);
+%   BINUNIT "month", "week", "day", "hour" or "minute" (binStep); only data in [T0, T1) are counted (T1 exclusive);
 %   bins are calendar bins, so the first/last bin is partial if T0/T1 is mid-bin.
 %   One row per bin:
 %     bin_start
@@ -17,14 +17,10 @@ arguments
     crimes table
     t0 (1,1) datetime
     t1 (1,1) datetime
-    binUnit (1,1) string {mustBeMember(binUnit, ["month","week"])} = "month"
+    binUnit (1,1) string {mustBeMember(binUnit, ["month","week","day","hour","minute"])} = "month"
 end
 
-if binUnit == "month"
-    step = calmonths(1);
-else
-    step = calweeks(1);
-end
+step = binStep(binUnit);
 edges = (dateshift(t0, 'start', binUnit):step:t1)';
 if edges(end) < t1
     edges(end+1) = edges(end) + step;

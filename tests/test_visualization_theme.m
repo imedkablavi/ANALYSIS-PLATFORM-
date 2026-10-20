@@ -69,9 +69,10 @@ end
 function testFeatureGroupPalette(tc)
 t = appTheme();
 verifyEqual(tc, t.groups.names, ...
-    ["activity", "temporal", "spatial", "cooffending", "graph", "sequence"]);
-verifySize(tc, t.groups.colors, [6 3]);
-verifyEqual(tc, size(unique(t.groups.colors, 'rows'), 1), 6);   % six distinct hues
+    ["activity", "temporal", "spatial", "cooffending", "graph", "sequence", "network"]);
+verifySize(tc, t.groups.colors, [7 3]);
+verifyEqual(tc, size(unique(t.groups.colors, 'rows'), 1), 7);   % seven distinct hues
+verifyEqual(tc, t.groupColor("network"), [98 80 214] / 255, 'AbsTol', 1e-12);   % #6250d6
 % Colour follows the group name, not its position in the query.
 c = t.groupColor(["graph"; "activity"; "unknown"; "Temporal"]);
 verifyEqual(tc, c(1, :), t.groups.colors(5, :));

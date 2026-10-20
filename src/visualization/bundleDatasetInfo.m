@@ -13,9 +13,12 @@ function info = bundleDatasetInfo(bundle)
 %                                      format, otherwise "event"/"events"
 %   info.entity_noun / entity_plural   "offender(s)" or "entity/entities"
 %   info.network_label     "Co-offending network" or "Relation network"
-%   info.bin, info.bin_step  temporal bin of the bundle ("month" or "week",
-%                            from bundle.config.temporal.bin; absent ->
-%                            "month") and its calendar step (replay cursor)
+%   info.bin, info.bin_step  temporal bin of the bundle ("month", "week",
+%                            "day", "hour" or "minute", from
+%                            bundle.config.temporal.bin; absent -> "month")
+%                            and its calendar step (replay cursor, binStep)
+%   info.time_format       datetime display format suited to the bin
+%   info.has_labels        published ground truth available (network data)
 %   Pure function: no graphics, unit-tested.
 
 info.id = "primary";
@@ -43,12 +46,24 @@ if isstruct(bundle) && isfield(bundle, 'config') && isfield(bundle.config, 'temp
         isfield(bundle.config.temporal, 'bin')
     info.bin = string(bundle.config.temporal.bin);
 end
-if info.bin == "week"
-    info.bin_step = calweeks(1);
-else
-    info.bin_step = calmonths(1);
+info.bin_step = binStep(info.bin);
+switch info.bin
+    case "month"
+        info.time_format = "yyyy-MM";
+    case {"week", "day"}
+        info.time_format = "yyyy-MM-dd";
+    otherwise
+        info.time_format = "yyyy-MM-dd HH:mm";
 end
-if info.format == "networkx_burglary_json"
+info.has_labels = isstruct(bundle) && isfield(bundle, 'ground_truth') && ...
+    isstruct(bundle.ground_truth) && isfield(bundle.ground_truth, 'evaluation');
+if info.format == "network_flow"
+    info.event_noun = "flow";
+    info.event_plural = "flows";
+    info.entity_noun = "host";
+    info.entity_plural = "hosts";
+    info.network_label = "Communication network";
+elseif info.format == "networkx_burglary_json"
     info.event_noun = "crime";
     info.event_plural = "crimes";
     info.entity_noun = "offender";
