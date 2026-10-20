@@ -1,22 +1,34 @@
 function plotActivityTimeline(ax, bundle, entityIndex, cursorTime)
-%PLOTACTIVITYTIMELINE Monthly crime counts with temporal anomalies and change points.
+%PLOTACTIVITYTIMELINE Monthly event counts with temporal anomalies and change points.
 %
 %   PLOTACTIVITYTIMELINE(AX, BUNDLE) draws the system series;
 %   ENTITYINDEX (optional, [] for none) overlays the selected entity's
-%   crimes as ticks; CURSORTIME (optional) draws the playback cursor.
-%   Markers: triangles = months whose count deviates >= threshold robust SD
-%   from the configured causal baseline (bundle.temporal.anomaly_method:
-%   seasonal same-month or rolling); dashed lines = change points.
+%   events as ink ticks; CURSORTIME (optional) draws the playback cursor
+%   (an ink rule labelled with the month it closes).
+%   Markers: red up-triangles / blue down-triangles = months whose count
+%   deviates >= threshold robust SD above / below the configured causal
+%   baseline (bundle.temporal.anomaly_method: seasonal same-month or
+%   rolling); green dashed rules = change points. Colours: appTheme.
 
 if nargin < 3, entityIndex = []; end
 if nargin < 4, cursorTime = NaT; end
 
-cla(ax);
-hold(ax, 'on');
+th = appTheme();
+info = bundleDatasetInfo(bundle);
 s = bundle.temporal.series;
+if height(s) == 0
+    showAxesMessage(ax, ["No dated " + info.event_plural + " in this dataset."; ...
+        "The timeline needs a time column."], th);
+    return;
+end
 a = bundle.temporal.crime_anomalies;
-plot(ax, s.bin_start, s.crimes, '-', 'Color', [0.25 0.45 0.75], 'LineWidth', 1.2, ...
-    'DisplayName', 'Crimes per month');
+nounTitle = upper(extractBefore(info.event_plural, 2)) + extractAfter(info.event_plural, 1);
+
+cla(ax);
+axis(ax, 'on');
+hold(ax, 'on');
+plot(ax, s.bin_start, s.crimes, '-', 'Color', th.semantic.series, ...
+    'LineWidth', th.mark.line, 'DisplayName', nounTitle + " per month");
 % Labels are strings ("..."): adding char vectors with + would sum their
 % character codes numerically instead of concatenating text.
 if isfield(bundle.temporal, 'anomaly_method') && bundle.temporal.anomaly_method == "seasonal_same_month"
@@ -25,35 +37,53 @@ else
     t = bundle.config.temporal;
     baselineLabel = sprintf("Causal baseline (previous %d %ss)", t.baseline_window, t.bin);
 end
-plot(ax, s.bin_start, a.baseline_median, ':', 'Color', [0.4 0.4 0.4], ...
-    'DisplayName', baselineLabel);
+plot(ax, s.bin_start, a.baseline_median, ':', 'Color', th.semantic.baseline, ...
+    'LineWidth', th.mark.line, 'DisplayName', baselineLabel);
 hi = a.is_high;
 lo = a.is_low;
 if any(hi)
-    plot(ax, s.bin_start(hi), s.crimes(hi), '^', 'MarkerFaceColor', [0.85 0.33 0.1], ...
-        'MarkerEdgeColor', 'none', 'DisplayName', 'Unusually high month');
+    plot(ax, s.bin_start(hi), s.crimes(hi), '^', 'LineStyle', 'none', ...
+        'MarkerFaceColor', th.semantic.unusualHigh, 'MarkerEdgeColor', th.color.surface, ...
+        'MarkerSize', th.mark.marker + 1, 'DisplayName', 'Unusually high month');
 end
 if any(lo)
-    plot(ax, s.bin_start(lo), s.crimes(lo), 'v', 'MarkerFaceColor', [0.5 0.2 0.6], ...
-        'MarkerEdgeColor', 'none', 'DisplayName', 'Unusually low month');
+    plot(ax, s.bin_start(lo), s.crimes(lo), 'v', 'LineStyle', 'none', ...
+        'MarkerFaceColor', th.semantic.unusualLow, 'MarkerEdgeColor', th.color.surface, ...
+        'MarkerSize', th.mark.marker + 1, 'DisplayName', 'Unusually low month');
 end
 cp = bundle.temporal.change_points;
 for k = 1:height(cp)
-    xline(ax, s.bin_start(cp.index(k)), '--', 'Color', [0.3 0.3 0.3], ...
-        'HandleVisibility', 'off');
+    xl = xline(ax, s.bin_start(cp.index(k)), '--', 'Color', th.semantic.changePoint, ...
+        'LineWidth', th.mark.thinLine, 'HandleVisibility', 'off');
+    if k == 1
+        xl.HandleVisibility = 'on';
+        xl.DisplayName = 'Change point';
+    end
 end
+yTop = max(s.crimes) * 1.08;
 if ~isempty(entityIndex)
     t = bundle.events.event_time(bundle.events.entity_index == entityIndex);
-    yl = max(s.crimes) * 1.05;
-    plot(ax, t, repmat(yl, size(t)), '|', 'Color', [0.8 0.1 0.1], ...
-        'MarkerSize', 12, 'LineWidth', 1.5, 'DisplayName', 'Selected offender''s crimes');
+    plot(ax, t, repmat(yTop, size(t)), '|', 'Color', th.semantic.selected, ...
+        'MarkerSize', 10, 'LineWidth', th.mark.line, ...
+        'DisplayName', "Selected " + info.entity_noun + "'s " + info.event_plural);
 end
 if ~isnat(cursorTime)
-    xline(ax, cursorTime, '-', 'Color', [0 0 0], 'LineWidth', 1.5, 'HandleVisibility', 'off');
+    xline(ax, cursorTime, '-', string(cursorTime - days(1), 'yyyy-MM'), ...
+        'Color', th.semantic.cursor, 'LineWidth', th.mark.line, ...
+        'LabelVerticalAlignment', 'bottom', 'LabelOrientation', 'horizontal', ...
+        'FontSize', th.font.small, 'HandleVisibility', 'off');
 end
 hold(ax, 'off');
-ylabel(ax, 'Crimes');
-title(ax, "Activity over time — " + baselineLabel + " (solved cases; last months right-censored)");
-legend(ax, 'Location', 'northwest', 'Box', 'off');
-grid(ax, 'on');
+ylim(ax, [0, max(1, yTop * 1.04)]);
+ylabel(ax, nounTitle);
+if info.format == "networkx_burglary_json"
+    note = "Solved cases only; the last months are right-censored.";
+else
+    note = "The last months may be incomplete.";
+end
+title(ax, ["Activity over time"; note]);
+styleAxes(ax, th);
+ax.XGrid = 'off';
+ax.YGrid = 'on';
+styleLegend(ax, th);
 end

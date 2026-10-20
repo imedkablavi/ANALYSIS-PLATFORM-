@@ -2,6 +2,9 @@
 
 ## Unreleased — post-audit hardening
 
+- App redesign: shared theme (`appTheme`, WCAG-checked text contrast, single-hue score ramp), KPI tiles, ranking filters/search, themed plots, empty-state messages, datasets without coordinates.
+- App dataset UI: "Open dataset…" (format detection, column-mapping dialog, progress dialog) and a dataset list fed by `listDatasets`; new tests in `tests/test_visualization_theme.m`.
+- Dataset import hardening: identifier columns read as text, `#` kept inside values, explicit numeric time units, self-interactions as single-participant events.
 - Fixed synthetic Isolation Forest evaluation to train on clean reference data and score contaminated synthetic observations as novelty detection.
 - Added configurable causal temporal anomaly baselines: rolling 12-month and same-calendar-month seasonal reference.
 - Production temporal mode now defaults to the seasonal same-month baseline; the rolling rule remains available for comparison.
