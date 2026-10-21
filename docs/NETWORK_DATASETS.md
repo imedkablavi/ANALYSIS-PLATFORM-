@@ -48,6 +48,16 @@ from ~0.1 M to a few M flows), one CIC-IDS2017 day, one UNSW-NB15 part, and LANL
 `max_rows` (≤ a few million). Every record becomes one event with two participants, so memory
 grows with 2 × rows.
 
+### Scale guards
+
+Traffic graphs have one giant component around gateways/DNS servers. Two graph features would
+not finish there and are skipped with a note in `bundle.meta.config_notes` (then dropped as
+empty by `prepareFeatureMatrix`): `clustering_coef` when sum(degree²) > `cfg.graph.max_clustering_work`
+(2e8; memory of (A·A).*A) and `betweenness` when the largest component exceeds
+`cfg.graph.max_betweenness_nodes` (50,000; Brandes cost ≈ n·m). The busiest-window feature now
+runs in O(k log k) per host (it was O(k²), harmless for ≤ 40 crimes, not for a host with
+millions of flows). Degree, strength, k-core, components and cut vertices are always computed.
+
 ## What the import does (`importNetworkFlows`, notes in `bundle.meta.dataset.import_notes`)
 
 | Step | Rule | Why |

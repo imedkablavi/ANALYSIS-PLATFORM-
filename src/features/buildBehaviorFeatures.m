@@ -80,8 +80,10 @@ for i = 1:n
                 F(i, C_BURST) = (sd - mu) / (sd + mu);
             end
             F(i, C_MAXGAP) = max(gaps) / max(medGap, 1);
-            % busiest window [t_j, t_j + W); O(k^2) but k <= 40 in the artifact
-            upper = arrayfun(@(tj) find(t < tj + burstWindow, 1, 'last'), t);
+            % busiest window [t_j, t_j + W): events in it = (#t < t_j + W) - j + 1.
+            % O(k log k); the former arrayfun/find was O(k^2), harmless for
+            % k <= 40 crimes but not for a network host with millions of flows.
+            upper = countBelow(t, t + burstWindow);
             F(i, C_PEAK) = max(upper - (1:numel(t))' + 1) / numel(t);
         end
     end
@@ -130,4 +132,19 @@ features = table(entityIds, F(:,C_COUNT), F(:,C_SPAN), F(:,C_DAYS), ...
     'radius_of_gyration','mean_step_distance','max_step_distance', ...
     'location_repeat_fraction','mean_group_size','solo_fraction', ...
     'max_group_size','repeat_partner_fraction'});
+end
+
+function c = countBelow(t, v)
+% Number of elements of the sorted column T strictly below each V(j) (V > T(1)).
+[ut, ~, g] = unique(t);
+cum = cumsum(accumarray(g, 1));
+b = discretize(v, [ut; Inf]);
+b(isnan(b)) = 0;                 % v below every t
+has = b >= 1;
+eq = false(size(b));
+eq(has) = ut(b(has)) == v(has);
+b(eq) = b(eq) - 1;
+c = zeros(size(v));
+ok = b >= 1;
+c(ok) = cum(b(ok));
 end

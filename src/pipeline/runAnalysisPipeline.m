@@ -94,7 +94,7 @@ timings.relations = toc(clk);
 clk = tic;
 stageNo = logStage(stageNo, progressFcn, "graph features");
 G = buildOffenderGraph(relations, entityIds);
-graphFeatures = computeGraphFeatures(G);
+[graphFeatures, graphNotes] = computeGraphFeatures(G, cfg);
 timings.graph = toc(clk);
 
 clk = tic;
@@ -260,6 +260,7 @@ configNotes = strings(0,1);
 if isfield(opts, "config_notes")
     configNotes = reshape(string(opts.config_notes), [], 1);
 end
+configNotes = [configNotes; graphNotes];   % scale guards that skipped a feature
 bundle = struct();
 bundle.meta = struct( ...
     'project', cfg.project.name, 'version', cfg.project.version, ...

@@ -64,6 +64,8 @@ cfg.anomaly.min_events = 3;            % eligibility: >= 2 inter-event gaps
 cfg.anomaly.feature_groups = ["activity","temporal","spatial", ...
     "cooffending","graph","sequence","network"];   % "network": traffic datasets only
 cfg.network.beacon_min_flows = 4;      % flows per host pair for beacon_cv_min
+cfg.graph.max_clustering_work = 2e8;   % sum(degree^2) above which clustering is skipped
+cfg.graph.max_betweenness_nodes = 5e4; % largest component above which betweenness is skipped
 cfg.anomaly.method = "isolation_forest";
 cfg.anomaly.iforest.num_learners = 200;
 cfg.anomaly.iforest.num_observations_per_learner = 256; % Liu et al. (2008)

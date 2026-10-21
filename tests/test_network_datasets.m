@@ -288,3 +288,38 @@ verifyTrue(tc, b.meta.dataset.has_labels);
 verifyEqual(tc, b.meta.dataset.label_counts.malicious, 2);
 verifyEqual(tc, b.config.temporal.bin, "hour");     % 1 s .. 151036 s = 41.9 h
 end
+
+function testGraphScaleGuards(tc)
+% A star (hub with 6 leaves) plus one triangle; tiny limits force the guards.
+s = [1 1 1 1 1 1 2];
+t = [2 3 4 5 6 7 3];
+G = graph(s, t, ones(1, 7), string(1:7));
+full = computeGraphFeatures(G);
+verifyEqual(tc, full.clustering_coef(2), 1);          % leaf 2: neighbours 1,3 linked
+cfg.graph = struct('max_clustering_work', 10, 'max_betweenness_nodes', 3);
+[gf, notes] = computeGraphFeatures(G, cfg);
+verifyTrue(tc, all(isnan(gf.clustering_coef)));
+verifyTrue(tc, all(isnan(gf.betweenness)));
+verifyEqual(tc, gf.degree, full.degree);              % cheap features unaffected
+verifyEqual(tc, gf.is_cut_vertex, full.is_cut_vertex);
+verifyEqual(tc, numel(notes), 2);
+verifyTrue(tc, contains(notes(1), "clustering_coef"));
+end
+
+function testPeakWindowShareWithManyEvents(tc)
+% 2,000 events of one entity: the O(k log k) busiest-window count must give
+% the same value as the definition (events in [t_j, t_j + 30 d)).
+n = 2000;
+t = datetime(2020,1,1) + days(sort(mod((1:n)' * 7.3, 400)));
+ev = table(ones(n,1), "C" + (1:n)', (1:n)', NaN(n,1), NaN(n,1), t, ones(n,1), ...
+    true(n,1), repmat("E1", n, 1), 'VariableNames', {'entity_index','crime_id', ...
+    'crime_num','x','y','event_time','num_offenders','id_restored','entity_id'});
+rel = table(zeros(0,1), zeros(0,1), zeros(0,1), 'VariableNames', {'a_index','b_index','weight'});
+f = buildBehaviorFeatures(ev, "E1", rel, struct());
+d = days(t - datetime(1970,1,1));
+best = 0;
+for j = 1:n
+    best = max(best, nnz(d >= d(j) & d < d(j) + 30));
+end
+verifyEqual(tc, f.peak_window_share, best / n, 'AbsTol', 1e-12);
+end
