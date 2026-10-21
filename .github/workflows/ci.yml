@@ -1,0 +1,156 @@
+# Continuous integration for the MATLAB research repo.
+# Jobs:
+#   lint             - MISS_HIT static analysis of all MATLAB code (no MATLAB needed)
+#   reference-audit  - download + SHA-verify the dataset, run the independent
+#                      Python audit and assert the published reference values
+#   license-check    - detects whether the MLM_LICENSE_TOKEN secret exists
+#   matlab-tests     - matlab.unittest suite; runs ONLY when that secret exists
+# See docs/REPRODUCIBILITY.md section 6.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Must match cfg.data.source_url / cfg.data.expected_blob_sha in configs/projectConfig.m.
+  DATASET_URL: https://raw.githubusercontent.com/erichoang/criminal-network-visualization/main/datasets/preprocessed/israel_lea_inp_burglary_offender_id_network.json
+  DATASET_SHA: 3afe9cbb4e313fb056f1b115c92a3f750f4698b9
+  DATASET_PATH: data/raw/israel_lea_inp_burglary_offender_id_network.json
+
+jobs:
+  lint:
+    name: MATLAB lint (MISS_HIT)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install miss_hit
+      # mh_lint exits non-zero on any lint finding, failing the job.
+      - run: mh_lint .
+
+  reference-audit:
+    name: Dataset reference audit (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore dataset cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.DATASET_PATH }}
+          key: dataset-${{ env.DATASET_SHA }}
+      - name: Download dataset (if not cached) and verify Git blob SHA
+        run: |
+          if [ ! -f "$DATASET_PATH" ]; then
+            mkdir -p "$(dirname "$DATASET_PATH")"
+            curl -fsSL --retry 3 -o "$DATASET_PATH" "$DATASET_URL"
+          fi
+          actual=$(git hash-object "$DATASET_PATH")
+          if [ "$actual" != "$DATASET_SHA" ]; then
+            echo "::error::Dataset blob SHA mismatch: expected $DATASET_SHA, got $actual"
+            exit 1
+          fi
+          echo "Dataset blob SHA verified: $actual"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install numpy networkx
+      - name: Run reference audit
+        run: python3 scripts/reference/audit_dataset_reference.py "$DATASET_PATH" --graph | tee audit.txt
+      - name: Assert reference values
+        run: |
+          # Exact lines printed by audit_dataset_reference.py (see docs/DATASET_SCHEMA_INSPECTION.md).
+          fail=0
+          while IFS= read -r expected; do
+            if grep -Fxq "$expected" audit.txt; then
+              echo "OK       $expected"
+            else
+              echo "::error::Audit value mismatch, expected line: '$expected'"
+              fail=1
+            fi
+          done <<'LINES'
+          relations_from_crimes 10651 pair_crime_rows 15422
+          isolated_nodes 7597
+          components 10468 largest 518 max_core 12
+          articulation_points 1156
+          LINES
+          exit $fail
+
+  license-check:
+    name: Check MATLAB licensing secret
+    runs-on: ubuntu-latest
+    outputs:
+      has_token: ${{ steps.check.outputs.has_token }}
+    steps:
+      # Secrets cannot be referenced in a job-level `if`, so expose only a boolean.
+      - id: check
+        env:
+          HAS_TOKEN: ${{ secrets.MLM_LICENSE_TOKEN != '' }}
+        run: |
+          echo "has_token=$HAS_TOKEN" >> "$GITHUB_OUTPUT"
+          if [ "$HAS_TOKEN" != "true" ]; then
+            msg="MATLAB tests were SKIPPED: repository secret MLM_LICENSE_TOKEN is not set (private repo needs a MathWorks batch licensing token). No MATLAB results were produced by this run."
+            echo "::notice title=MATLAB tests skipped::$msg"
+            echo "### MATLAB tests skipped" >> "$GITHUB_STEP_SUMMARY"
+            echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  matlab-tests:
+    name: MATLAB unit tests
+    needs: license-check
+    if: needs.license-check.outputs.has_token == 'true'
+    runs-on: ubuntu-latest
+    env:
+      MLM_LICENSE_TOKEN: ${{ secrets.MLM_LICENSE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore dataset cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.DATASET_PATH }}
+          key: dataset-${{ env.DATASET_SHA }}
+      - name: Download dataset (if not cached) and verify Git blob SHA
+        run: |
+          if [ ! -f "$DATASET_PATH" ]; then
+            mkdir -p "$(dirname "$DATASET_PATH")"
+            curl -fsSL --retry 3 -o "$DATASET_PATH" "$DATASET_URL"
+          fi
+          actual=$(git hash-object "$DATASET_PATH")
+          if [ "$actual" != "$DATASET_SHA" ]; then
+            echo "::error::Dataset blob SHA mismatch: expected $DATASET_SHA, got $actual"
+            exit 1
+          fi
+      # R2023b: pinned (not `latest`) so results are reproducible across runs;
+      # it is the release recommended in docs/REPRODUCIBILITY.md and is newer
+      # than the R2021b minimum required by iforest/isanomaly.
+      - uses: matlab-actions/setup-matlab@v3
+        with:
+          release: R2023b
+          products: MATLAB Statistics_and_Machine_Learning_Toolbox
+          cache: true
+      # Same suite as scripts/run_tests.m (tests/*.m; each test calls setupProject),
+      # plus JUnit output and a job summary from the action.
+      - uses: matlab-actions/run-tests@v3
+        with:
+          source-folder: src;configs;app;scripts;tests/fixtures
+          select-by-folder: tests
+          test-results-junit: test-results/results.xml
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: matlab-test-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 14
