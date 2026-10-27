@@ -17,25 +17,27 @@ th = appTheme();
 info = bundleDatasetInfo(bundle);
 s = bundle.temporal.series;
 if height(s) == 0
-    showAxesMessage(ax, ["No dated " + info.event_plural + " in this dataset."; ...
-        "The timeline needs a time column."], th);
+    showAxesMessage(ax, [uiText("No dated %s in this dataset.", uiText(info.event_plural)); ...
+        uiText("The timeline needs a time column.")], th);
     return;
 end
 a = bundle.temporal.crime_anomalies;
-nounTitle = upper(extractBefore(info.event_plural, 2)) + extractAfter(info.event_plural, 1);
+noun = uiText(info.event_plural);
+nounTitle = upper(extractBefore(noun, 2)) + extractAfter(noun, 1);
+binWord = uiText(info.bin);
 
 cla(ax, 'reset');   % also hidden-handle objects and manual limits of a previous dataset
 axis(ax, 'on');
 hold(ax, 'on');
 plot(ax, s.bin_start, s.crimes, '-', 'Color', th.semantic.series, ...
-    'LineWidth', th.mark.line, 'DisplayName', nounTitle + " per " + info.bin);
+    'LineWidth', th.mark.line, 'DisplayName', uiText("%s per %s", nounTitle, binWord));
 % Labels are strings ("..."): adding char vectors with + would sum their
 % character codes numerically instead of concatenating text.
 if isfield(bundle.temporal, 'anomaly_method') && bundle.temporal.anomaly_method == "seasonal_same_month"
-    baselineLabel = "Seasonal baseline (same calendar month, prior years)";
+    baselineLabel = uiText("Seasonal baseline (same calendar month, prior years)");
 else
     t = bundle.config.temporal;
-    baselineLabel = sprintf("Causal baseline (previous %d %ss)", t.baseline_window, t.bin);
+    baselineLabel = uiText("Causal baseline (previous %d %ss)", t.baseline_window, binWord);
 end
 plot(ax, s.bin_start, a.baseline_median, ':', 'Color', th.semantic.baseline, ...
     'LineWidth', th.mark.line, 'DisplayName', baselineLabel);
@@ -44,12 +46,12 @@ lo = a.is_low;
 if any(hi)
     plot(ax, s.bin_start(hi), s.crimes(hi), '^', 'LineStyle', 'none', ...
         'MarkerFaceColor', th.semantic.unusualHigh, 'MarkerEdgeColor', th.color.surface, ...
-        'MarkerSize', th.mark.marker + 1, 'DisplayName', "Unusually high " + info.bin);
+        'MarkerSize', th.mark.marker + 1, 'DisplayName', uiText("Unusually high %s", binWord));
 end
 if any(lo)
     plot(ax, s.bin_start(lo), s.crimes(lo), 'v', 'LineStyle', 'none', ...
         'MarkerFaceColor', th.semantic.unusualLow, 'MarkerEdgeColor', th.color.surface, ...
-        'MarkerSize', th.mark.marker + 1, 'DisplayName', "Unusually low " + info.bin);
+        'MarkerSize', th.mark.marker + 1, 'DisplayName', uiText("Unusually low %s", binWord));
 end
 cp = bundle.temporal.change_points;
 for k = 1:height(cp)
@@ -57,7 +59,7 @@ for k = 1:height(cp)
         'LineWidth', th.mark.thinLine, 'HandleVisibility', 'off');
     if k == 1
         xl.HandleVisibility = 'on';
-        xl.DisplayName = 'Change point';
+        xl.DisplayName = uiText("Change point");
     end
 end
 yTop = max(s.crimes) * 1.08;
@@ -69,7 +71,7 @@ if ~isempty(entityIndex)
     own = histcounts(t, edges)';
     stairs(ax, s.bin_start, own, '-', 'Color', th.semantic.selected, ...
         'LineWidth', th.mark.line, ...
-        'DisplayName', "Selected " + info.entity_noun + "'s " + info.event_plural);
+        'DisplayName', uiText("Selected %s's %s", uiText(info.entity_noun), noun));
 end
 if ~isnat(cursorTime)
     xline(ax, cursorTime, '-', string(cursorTime - seconds(1), info.time_format), ...
@@ -81,11 +83,11 @@ hold(ax, 'off');
 ylim(ax, [0, max(1, yTop * 1.04)]);
 ylabel(ax, nounTitle);
 if info.format == "networkx_burglary_json"
-    note = "Solved cases only; the last months are right-censored.";
+    note = uiText("Solved cases only; the last months are right-censored.");
 else
-    note = "The last " + info.bin + "s may be incomplete.";
+    note = uiText("The last %ss may be incomplete.", binWord);
 end
-title(ax, ["Activity over time"; note]);
+title(ax, [uiText("Activity over time"); note]);
 styleAxes(ax, th);
 ax.XGrid = 'off';
 ax.YGrid = 'on';

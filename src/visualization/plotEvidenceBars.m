@@ -9,8 +9,8 @@ function plotEvidenceBars(ax, bundle, entityIndex)
 th = appTheme();
 ev = entityEvidence(bundle, entityIndex);
 if height(ev) == 0
-    showAxesMessage(ax, ["Not scored: insufficient history."; ...
-        "This is not a statement that the behaviour is normal."], th);
+    showAxesMessage(ax, [uiText("Not scored: insufficient history."); ...
+        uiText("This is not a statement that the behaviour is normal.")], th);
     return;
 end
 cla(ax, 'reset');   % also hidden-handle objects and manual limits of a previous dataset
@@ -26,7 +26,7 @@ keys = gobjects(0);
 for k = 1:numel(present)
     label = th.groups.labels(th.groups.names == present(k));
     keys(end+1) = patch(ax, NaN, NaN, th.groupColor(present(k)), ... %#ok<AGROW>
-        'EdgeColor', 'none', 'DisplayName', label);
+        'EdgeColor', 'none', 'DisplayName', uiText(label));
 end
 thr = bundle.config.anomaly.feature_z_threshold;
 xline(ax, 0, '-', 'Color', th.color.axis, 'LineWidth', th.mark.thinLine, ...
@@ -34,10 +34,10 @@ xline(ax, 0, '-', 'Color', th.color.axis, 'LineWidth', th.mark.thinLine, ...
 xline(ax, [-thr thr], '--', 'Color', th.semantic.threshold, ...
     'LineWidth', th.mark.thinLine, 'HandleVisibility', 'off');
 hold(ax, 'off');
-set(ax, 'YTick', 1:height(ev), 'YTickLabel', ev.label, 'YDir', 'reverse');
+set(ax, 'YTick', 1:height(ev), 'YTickLabel', arrayfun(@(x) char(uiText(x)), ev.label, 'UniformOutput', false), 'YDir', 'reverse');
 ylim(ax, [0.4, height(ev) + 0.6]);
-xlabel(ax, sprintf('Robust z (deviation from reference median; dashed = ±%.1f)', thr));
-title(ax, 'Deviation profile');
+xlabel(ax, uiText("Robust z (deviation from reference median; dashed = ±%.1f)", thr));
+title(ax, uiText("Deviation profile"));
 styleAxes(ax, th);
 ax.FontSize = th.font.small;
 ax.YGrid = 'off';

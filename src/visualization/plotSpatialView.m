@@ -18,8 +18,8 @@ th = appTheme();
 info = bundleDatasetInfo(bundle);
 if ~info.has_coordinates || ~isfield(bundle, 'spatial') || ~isfield(bundle.spatial, 'grid') ...
         || isempty(bundle.spatial.grid)
-    showAxesMessage(ax, ["No coordinates in this dataset."; ...
-        "The relative-space view needs x/y columns."], th);
+    showAxesMessage(ax, [uiText("No coordinates in this dataset."); ...
+        uiText("The relative-space view needs x/y columns.")], th);
     return;
 end
 
@@ -38,7 +38,7 @@ if ~isnat(t0) && ~isnat(t1)
     m = c.event_time >= t0 & c.event_time < t1;
     scatter(ax, c.x(m), c.y(m), 24, th.semantic.windowEvents, 'filled', ...
         'MarkerEdgeColor', th.color.surface, 'LineWidth', 0.5, 'MarkerFaceAlpha', 0.75, ...
-        'DisplayName', "Events in replay window");
+        'DisplayName', uiText("Events in replay window"));
     shown = true;
 end
 if ~isempty(entityIndex)
@@ -46,7 +46,7 @@ if ~isempty(entityIndex)
     plot(ax, e.x, e.y, '-o', 'Color', th.semantic.selected, ...
         'MarkerFaceColor', th.semantic.selected, 'MarkerEdgeColor', th.color.surface, ...
         'MarkerSize', th.mark.marker - 1, 'LineWidth', th.mark.thinLine, ...
-        'DisplayName', "Selected " + info.entity_noun + "'s path");
+        'DisplayName', uiText("Selected %s's path", uiText(info.entity_noun)));
     for k = 1:height(e)
         text(ax, e.x(k), e.y(k), " " + k, 'FontSize', th.font.small, ...
             'Color', th.color.textSecondary, 'FontName', th.font.family, ...
@@ -57,9 +57,9 @@ end
 hold(ax, 'off');
 axis(ax, [0 1 0 1]);
 axis(ax, 'square');
-xlabel(ax, 'X (normalized)');
-ylabel(ax, 'Y (normalized)');
-title(ax, 'Relative density (log) and selected path');
+xlabel(ax, uiText("X (normalized)"));
+ylabel(ax, uiText("Y (normalized)"));
+title(ax, uiText("Relative density (log) and selected path"));
 styleAxes(ax, th);
 ax.Layer = 'top';
 if shown

@@ -11,6 +11,7 @@ function setupOnce(~)
 root = fileparts(fileparts(mfilename('fullpath')));
 addpath(fullfile(root, 'scripts'));
 setupProject();
+uiText("--lang", "en");   % assertions below use the English texts
 end
 
 %% appTheme
@@ -289,3 +290,15 @@ txt = findobj(ax, 'Type', 'text');
 verifyNumElements(tc, txt, 1);
 verifyTrue(tc, any(contains(string(txt.String), "No coordinates")));
 end
+
+function testTurkishInterfaceText(tc)
+uiText("--lang", "tr");
+tc.addTeardown(@() uiText("--lang", "en"));
+verifyEqual(tc, uiText("Ranking"), "Sıralama");
+verifyEqual(tc, uiText("%s per %s", "Akış", "dakika"), "dakika başına Akış");   % reordered
+verifyEqual(tc, uiText("Unusually high %s", uiText("minute")), "Olağandışı yüksek dakika");
+verifyEqual(tc, uiText("no translation for this"), "no translation for this");
+uiText("--lang", "en");
+verifyEqual(tc, uiText("Ranking"), "Ranking");
+end
+

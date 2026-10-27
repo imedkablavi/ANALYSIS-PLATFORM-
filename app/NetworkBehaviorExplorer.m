@@ -101,6 +101,12 @@ classdef NetworkBehaviorExplorer < handle
     methods
         function app = NetworkBehaviorExplorer(source)
             app.Theme = appTheme();
+            % Interface language: last choice, Turkish by default.
+            try
+                uiText("--lang", getpref('NetworkBehaviourExplorer', 'lang', 'tr'));
+            catch
+                uiText("--lang", "tr");
+            end
             app.RootDir = string(fileparts(fileparts(mfilename('fullpath'))));
             bundle = [];
             file = "";
@@ -156,7 +162,7 @@ classdef NetworkBehaviorExplorer < handle
                 sourceFile = "";
             end
             app.stopTimer();
-            app.PlayButton.Text = 'Play';
+            app.PlayButton.Text = char(uiText("Play"));
             app.Bundle = bundle;
             app.BundleFile = string(sourceFile);
             app.Selected = [];
@@ -206,10 +212,10 @@ classdef NetworkBehaviorExplorer < handle
                 round(pt.partner_iforest_score, 3), 'VariableNames', ...
                 {'partner', 'shared_events', 'first', 'last', 'partner_score'});
             app.PartnerTable.UserData = pt.partner_index;
-            sel = "Selected: " + string(p.entity_id) + " (" + ctx.status + ")";
+            sel = uiText("Selected: %s (%s)", string(p.entity_id), ctx.status);
             if ismember('truth', b.entities.Properties.VariableNames)
                 % Shown after scoring, for evaluation; the detectors never use it.
-                sel = sel + "  ·  published label: " + string(b.entities.truth(entityIndex));
+                sel = sel + uiText("  ·  published label: %s", string(b.entities.truth(entityIndex)));
             end
             app.SelectionLabel.Text = sel;
             app.highlightRankRow();
@@ -227,12 +233,12 @@ classdef NetworkBehaviorExplorer < handle
             tEnd = app.cursorTime();
             ds = bundleDatasetInfo(b);
             frame = buildPlaybackFrame(b, tEnd, app.WindowSpinner.Value * ds.bin_step);
-            txt = sprintf("%s to %s  ·  %d %s, %d active ties, %d new ties", ...
+            txt = uiText("%s to %s  ·  %d %s, %d active ties, %d new ties", ...
                 string(frame.t0, ds.time_format), string(frame.t1 - seconds(1), ds.time_format), ...
-                numel(frame.crime_rows), ds.event_plural, height(frame.edges), ...
+                numel(frame.crime_rows), uiText(ds.event_plural), height(frame.edges), ...
                 height(frame.new_edges));
             if frame.bin_is_anomalous
-                app.TimeLabel.Text = txt + "  ·  Unusual " + ds.bin + " (triangles on the timeline)";
+                app.TimeLabel.Text = txt + uiText("  ·  Unusual %s (triangles on the timeline)", uiText(ds.bin));
                 app.TimeLabel.FontWeight = 'bold';
                 if app.AudioBox.Value
                     app.audioCue();
@@ -254,8 +260,8 @@ classdef NetworkBehaviorExplorer < handle
                     app.NetInfo.plot.ButtonDownFcn = @(~, evt) app.onGraphClick(evt);
                 catch ME
                     app.stopTimer();
-                    app.PlayButton.Text = 'Play';
-                    showAxesMessage(app.NetAxes, "Network view unavailable: " + ME.message, app.Theme);
+                    app.PlayButton.Text = char(uiText("Play"));
+                    showAxesMessage(app.NetAxes, uiText("Network view unavailable: %s", ME.message), app.Theme);
                 end
             end
             drawnow limitrate;
@@ -294,26 +300,30 @@ classdef NetworkBehaviorExplorer < handle
 
         function buildHeader(app)
             th = app.Theme;
-            h = uigridlayout(app.MainGrid, [1 7]);
+            h = uigridlayout(app.MainGrid, [1 8]);
             h.Layout.Row = 1;
             h.Layout.Column = [1 2];
-            h.ColumnWidth = {'fit', 'fit', 'fit', '1x', 300, 120, 80};
+            h.ColumnWidth = {'fit', 'fit', 'fit', '1x', 70, 300, 130, 90};
             h.RowHeight = {'1x'};
             h.Padding = [0 0 0 0];
             h.ColumnSpacing = 12;
             app.setIf(h, 'BackgroundColor', th.color.surface);
-            app.label(h, "Network Behaviour Explorer", th.font.header, th.color.text, 'bold');
-            app.DatasetLabel = app.label(h, "No dataset loaded", th.font.base, th.color.text, 'normal');
+            app.label(h, uiText("Network Behaviour Explorer"), th.font.header, th.color.text, 'bold');
+            app.DatasetLabel = app.label(h, uiText("No dataset loaded"), th.font.base, th.color.text, 'normal');
             app.FormatBadge = app.label(h, "", th.font.small, th.color.textSecondary, 'normal');
             app.label(h, "", th.font.small, th.color.text, 'normal');
+            uidropdown(h, 'Items', {'TR', 'EN'}, 'ItemsData', {'tr', 'en'}, ...
+                'Value', char(uiText("--lang")), 'FontName', th.font.family, ...
+                'FontSize', th.font.base, 'Tooltip', char(uiText("Language")), ...
+                'ValueChangedFcn', @(~, evt) app.switchLanguage(evt.Value));
             app.DatasetDrop = uidropdown(h, 'Items', {'(no datasets)'}, 'ItemsData', {''}, ...
                 'FontName', th.font.family, 'FontSize', th.font.base, ...
-                'Tooltip', 'Analysed datasets', ...
+                'Tooltip', char(uiText("Analysed datasets")), ...
                 'ValueChangedFcn', @(src, evt) app.onDatasetChosen(src, evt));
-            app.OpenButton = app.plainButton(h, ['Open dataset' char(8230)], ...
-                'Import a dataset file and analyse it', @(~, ~) app.openDataset());
-            app.ExportButton = app.plainButton(h, 'Export', ...
-                'Save PNGs of the views and the evidence text to outputs/', @(~, ~) app.exportViews());
+            app.OpenButton = app.plainButton(h, char(uiText("Open dataset…")), ...
+                char(uiText("Import a dataset file and analyse it")), @(~, ~) app.openDataset());
+            app.ExportButton = app.plainButton(h, char(uiText("Export")), ...
+                char(uiText("Save PNGs of the views and the evidence text to outputs/")), @(~, ~) app.exportViews());
         end
 
         function buildSummary(app)
@@ -332,20 +342,43 @@ classdef NetworkBehaviorExplorer < handle
             s.Padding = [0 0 0 0];
             s.RowSpacing = 6;
             app.setIf(s, 'BackgroundColor', th.color.surface);
-            app.label(s, "Ranking", th.font.title, th.color.text, 'bold');
+            app.label(s, uiText("Ranking"), th.font.title, th.color.text, 'bold');
             app.SearchField = uieditfield(s, 'text', 'FontName', th.font.family, ...
                 'FontSize', th.font.base, ...
                 'ValueChangingFcn', @(~, evt) app.onSearch(evt.Value), ...
                 'ValueChangedFcn', @(src, ~) app.onSearch(src.Value));
-            app.setIf(app.SearchField, 'Placeholder', 'Search ID');
-            app.FilterDrop = uidropdown(s, 'Items', app.FilterItems, ...
+            app.setIf(app.SearchField, 'Placeholder', char(uiText("Search ID")));
+            app.FilterDrop = uidropdown(s, 'Items', cellfun(@(x) char(uiText(x)), app.FilterItems, ...
+                'UniformOutput', false), 'ItemsData', app.FilterItems, ...
                 'FontName', th.font.family, 'FontSize', th.font.base, ...
                 'ValueChangedFcn', @(~, ~) app.fillRanking());
             app.RankCountLabel = app.label(s, "", th.font.small, th.color.textSecondary, 'normal');
             app.RankTable = uitable(s, 'CellSelectionCallback', @(~, evt) app.onRankSelect(evt));
             app.styleTable(app.RankTable);
-            app.RankTable.ColumnName = {'ID', 'IF rank', 'IF score', 'Base rank', ...
-                'Base score', 'Events', 'Main group'};
+            app.RankTable.ColumnName = cellfun(@(x) char(uiText(x)), {'ID', 'IF rank', ...
+                'IF score', 'Base rank', 'Base score', 'Events', 'Main group'}, 'UniformOutput', false);
+        end
+
+        function switchLanguage(app, lang)
+            % Rebuild the window in the chosen language with the same data.
+            uiText("--lang", lang);
+            try
+                setpref('NetworkBehaviourExplorer', 'lang', char(lang));
+            catch
+                % preferences are a convenience only
+            end
+            bundle = app.Bundle;
+            file = app.BundleFile;
+            pos = app.Figure.Position;
+            if strlength(file) > 0
+                next = NetworkBehaviorExplorer(file);
+            elseif ~isempty(bundle)
+                next = NetworkBehaviorExplorer(bundle);
+            else
+                next = NetworkBehaviorExplorer();
+            end
+            next.Figure.Position = pos;
+            delete(app);
         end
 
         function s = tokenPreview(~, tokens)
@@ -369,43 +402,43 @@ classdef NetworkBehaviorExplorer < handle
             m.ColumnSpacing = 14;
             app.setIf(m, 'BackgroundColor', th.color.surface);
 
-            app.NetAxes = app.axesPanel(m, "Network", 1, 1);
+            app.NetAxes = app.axesPanel(m, uiText("Network"), 1, 1);
 
-            dp = app.card(m, "Details");
+            dp = app.card(m, uiText("Details"));
             dp.Layout.Row = 1;
             dp.Layout.Column = 2;
             dg = uigridlayout(dp, [1 1]);
             dg.Padding = [0 0 0 0];
             app.setIf(dg, 'BackgroundColor', th.color.surface);
             app.Tabs = uitabgroup(dg);
-            g1 = app.tabGrid("Why flagged");
+            g1 = app.tabGrid(uiText("Why flagged"));
             app.ExplainText = uitextarea(g1, 'Editable', 'off', 'FontName', th.font.family, ...
                 'FontSize', th.font.base, 'FontColor', th.color.text, ...
                 'BackgroundColor', th.color.surface);
-            g2 = app.tabGrid("Deviation profile");
+            g2 = app.tabGrid(uiText("Deviation profile"));
             app.EvidenceAxes = app.themedAxes(g2);
-            g3 = app.tabGrid("Events");
+            g3 = app.tabGrid(uiText("Events"));
             app.EventTable = uitable(g3);
             app.styleTable(app.EventTable);
-            g4 = app.tabGrid("Partners");
+            g4 = app.tabGrid(uiText("Partners"));
             app.PartnerTable = uitable(g4, 'CellSelectionCallback', @(~, evt) app.onPartnerSelect(evt));
             app.styleTable(app.PartnerTable);
-            g9 = app.tabGrid("Space");
+            g9 = app.tabGrid(uiText("Space"));
             app.MapAxes = app.themedAxes(g9);
-            g5 = app.tabGrid("Patterns");
+            g5 = app.tabGrid(uiText("Patterns"));
             app.PatternTable = uitable(g5);
             app.styleTable(app.PatternTable);
-            g6 = app.tabGrid("Detectors");
+            g6 = app.tabGrid(uiText("Detectors"));
             app.DetectorAxes = app.themedAxes(g6);
-            g8 = app.tabGrid("Ground truth");
+            g8 = app.tabGrid(uiText("Ground truth"));
             app.TruthTable = uitable(g8);
             app.styleTable(app.TruthTable);
-            g7 = app.tabGrid("Data quality");
+            g7 = app.tabGrid(uiText("Data quality"));
             app.QualityTable = uitable(g7);
             app.styleTable(app.QualityTable);
 
             % Timeline with its replay controls directly underneath.
-            tp = app.card(m, "Timeline");
+            tp = app.card(m, uiText("Timeline"));
             tp.Layout.Row = 2;
             tp.Layout.Column = [1 2];
             tg = uigridlayout(tp, [2 1]);
@@ -425,21 +458,21 @@ classdef NetworkBehaviorExplorer < handle
             r.Padding = [0 0 0 0];
             r.ColumnSpacing = 10;
             app.setIf(r, 'BackgroundColor', th.color.surface);
-            app.ResetButton = app.plainButton(r, 'Reset', 'Back to the first period', ...
+            app.ResetButton = app.plainButton(r, char(uiText("Reset")), char(uiText("Back to the first period")), ...
                 @(~, ~) app.setCursor(1));
-            app.StepButton = app.plainButton(r, 'Step', 'Advance one period', ...
+            app.StepButton = app.plainButton(r, char(uiText("Step")), char(uiText("Advance one period")), ...
                 @(~, ~) app.setCursor(app.CursorIndex + 1));
-            app.PlayButton = app.plainButton(r, 'Play', 'Play / pause the replay', ...
+            app.PlayButton = app.plainButton(r, char(uiText("Play")), char(uiText("Play / pause the replay")), ...
                 @(~, ~) app.togglePlay());
             app.TimeSlider = uislider(r, 'Limits', [1 2], 'Value', 1, ...
                 'MajorTicks', [], 'MinorTicks', [], ...
                 'ValueChangedFcn', @(s, ~) app.setCursor(s.Value));
-            app.label(r, "Window", th.font.base, th.color.textSecondary, 'normal');
+            app.label(r, uiText("Window"), th.font.base, th.color.textSecondary, 'normal');
             app.WindowSpinner = uispinner(r, 'Limits', [1 120], 'Value', 12, ...
-                'Tooltip', 'Window length in timeline bins (months, weeks, days, hours or minutes)', ...
+                'Tooltip', char(uiText("Window length in timeline bins (months, weeks, days, hours or minutes)")), ...
                 'FontName', th.font.family, 'FontSize', th.font.base, ...
                 'ValueChangedFcn', @(~, ~) app.setCursor(app.CursorIndex));
-            app.AudioBox = uicheckbox(r, 'Text', 'Sound', 'Value', false, ...
+            app.AudioBox = uicheckbox(r, 'Text', char(uiText("Sound")), 'Value', false, ...
                 'FontName', th.font.family, 'FontSize', th.font.base, ...
                 'FontColor', th.color.textSecondary);
             app.TimeLabel = app.label(r, "", th.font.small, th.color.textSecondary, 'normal');
@@ -454,9 +487,9 @@ classdef NetworkBehaviorExplorer < handle
             s.RowHeight = {'1x'};
             s.Padding = [0 0 0 0];
             app.setIf(s, 'BackgroundColor', th.color.surface);
-            app.StatusLabel = app.label(s, "Ready.", th.font.small, th.color.textSecondary, 'normal');
-            app.SelectionLabel = app.label(s, "No selection", th.font.small, th.color.text, 'normal');
-            d = app.label(s, app.Disclaimer, th.font.small, th.color.textSecondary, 'normal');
+            app.StatusLabel = app.label(s, uiText("Ready."), th.font.small, th.color.textSecondary, 'normal');
+            app.SelectionLabel = app.label(s, uiText("No selection"), th.font.small, th.color.text, 'normal');
+            d = app.label(s, uiText(app.Disclaimer), th.font.small, th.color.textSecondary, 'normal');
             d.HorizontalAlignment = 'right';
         end
 
@@ -540,10 +573,10 @@ classdef NetworkBehaviorExplorer < handle
             parts = strings(1, 0);
             for i = 1:numel(kpi.tiles) - 1
                 t = kpi.tiles(i);
-                parts(end+1) = t.value_text + " " + lower(t.label); %#ok<AGROW>
+                parts(end+1) = t.value_text + " " + uiText(lower(t.label)); %#ok<AGROW>
             end
             q = kpi.tiles(end);
-            parts(end+1) = "data quality: " + lower(q.value_text);
+            parts(end+1) = uiText("data quality: %s", uiText(lower(q.value_text)));
             app.SummaryLabel.Text = char(joinStrings(parts, "   ·   "));
             if q.status == "critical"
                 app.SummaryLabel.FontColor = th.status.critical;
@@ -562,9 +595,10 @@ classdef NetworkBehaviorExplorer < handle
             replayOn = nMonths > 1;
             app.setReplayEnabled(replayOn);
             if replayOn
-                app.TimeLabel.Text = "Full period  ·  press Play to replay " + ds.bin + " by " + ds.bin;
+                app.TimeLabel.Text = uiText("Full period  ·  press Play to replay %s by %s", ...
+                    uiText(ds.bin), uiText(ds.bin));
             else
-                app.TimeLabel.Text = "Replay needs dated events";
+                app.TimeLabel.Text = uiText("Replay needs dated events");
             end
             app.TimeLabel.FontWeight = 'normal';
             app.AudioBox.Value = logical(cfgGet(app.bundleConfig(), "app.audio_cues", false));
@@ -591,22 +625,21 @@ classdef NetworkBehaviorExplorer < handle
                 ev.recall_at_k = round(ev.recall_at_k, 3);
                 app.TruthTable.Data = ev;
             else
-                app.TruthTable.Data = table("This dataset has no published labels: " + ...
-                    "results are deviations only, not verified detections.", ...
+                app.TruthTable.Data = table(uiText("This dataset has no published labels: " + ...
+                    "results are deviations only, not verified detections."), ...
                     'VariableNames', {'note'});
             end
             app.fillRanking();
             app.safePlot(app.TimeAxes, @() plotActivityTimeline(app.TimeAxes, b, [], app.cursorTime()));
             app.safePlot(app.MapAxes, @() plotSpatialView(app.MapAxes, b, []));
-            showAxesMessage(app.NetAxes, "Select an entity to show its " + ...
-                lower(ds.network_label) + ".", th);
-            showAxesMessage(app.EvidenceAxes, "Select an entity.", th);
+            showAxesMessage(app.NetAxes, uiText("Select an entity in the ranking to show its network."), th);
+            showAxesMessage(app.EvidenceAxes, uiText("Select an entity."), th);
             app.ExplainText.Value = {''};
             app.EventTable.Data = table();
             app.PartnerTable.Data = table();
             app.PartnerTable.UserData = [];
-            app.SelectionLabel.Text = "No selection";
-            app.setStatus("Loaded " + ds.name + " (" + ds.format + ").");
+            app.SelectionLabel.Text = uiText("No selection");
+            app.setStatus(uiText("Loaded %s", ds.name + " (" + ds.format + ")."));
             if ~isempty(app.RankRows)
                 app.selectEntity(app.RankRows(1));
             end
@@ -619,7 +652,7 @@ classdef NetworkBehaviorExplorer < handle
             app.Months = NaT(0, 1);
             app.RankRows = [];
             app.Selected = [];
-            app.DatasetLabel.Text = 'No dataset loaded';
+            app.DatasetLabel.Text = char(uiText("No dataset loaded"));
             app.FormatBadge.Text = '';
             app.SummaryLabel.Text = '';
             app.RankTable.Data = table();
@@ -634,7 +667,7 @@ classdef NetworkBehaviorExplorer < handle
             app.TimeLabel.Text = '';
             app.setControlsEnabled(false);
             app.setReplayEnabled(false);
-            app.setStatus("No dataset loaded. Use Open dataset in the header.");
+            app.setStatus(uiText("No dataset loaded. Use Open dataset in the header."));
         end
 
         function setControlsEnabled(app, tf)
@@ -673,9 +706,9 @@ classdef NetworkBehaviorExplorer < handle
             [rows, shown] = filterRanking(b.entities, S, app.FilterDrop.Value, app.SearchText);
             app.RankRows = rows;
             app.RankTable.Data = shown;
-            app.RankCountLabel.Text = sprintf('%d shown', numel(rows));
+            app.RankCountLabel.Text = char(uiText("%d shown", numel(rows)));
             if strlength(app.SearchText) > 0
-                app.RankCountLabel.Text = sprintf('%d shown matching "%s"', numel(rows), app.SearchText);
+                app.RankCountLabel.Text = char(uiText("%d shown matching ""%s""", numel(rows), app.SearchText));
             end
             app.highlightRankRow();
         end
@@ -732,7 +765,7 @@ classdef NetworkBehaviorExplorer < handle
                 app.NetInfo.plot.ButtonDownFcn = @(~, evt) app.onGraphClick(evt);
             catch ME
                 app.NetInfo = struct('nodes', [], 'plot', []);
-                showAxesMessage(app.NetAxes, "Network view unavailable: " + ME.message, app.Theme);
+                showAxesMessage(app.NetAxes, uiText("Network view unavailable: %s", ME.message), app.Theme);
             end
         end
 
@@ -742,7 +775,7 @@ classdef NetworkBehaviorExplorer < handle
             try
                 fcn();
             catch ME
-                showAxesMessage(ax, ["View unavailable:"; string(ME.message)], app.Theme);
+                showAxesMessage(ax, uiText("View unavailable: %s", ME.message), app.Theme);
             end
         end
 
@@ -816,7 +849,7 @@ classdef NetworkBehaviorExplorer < handle
             if ~isempty(app.PlayTimer) && isvalid(app.PlayTimer) && ...
                     strcmp(app.PlayTimer.Running, 'on')
                 app.stopTimer();
-                app.PlayButton.Text = 'Play';
+                app.PlayButton.Text = char(uiText("Play"));
                 return;
             end
             if isempty(app.Months)
@@ -827,7 +860,7 @@ classdef NetworkBehaviorExplorer < handle
             end
             app.PlayTimer = timer('ExecutionMode', 'fixedSpacing', 'Period', 0.8, ...
                 'BusyMode', 'drop', 'TimerFcn', @(~, ~) app.tick());
-            app.PlayButton.Text = 'Pause';
+            app.PlayButton.Text = char(uiText("Pause"));
             start(app.PlayTimer);
         end
 
@@ -838,13 +871,13 @@ classdef NetworkBehaviorExplorer < handle
             try
                 if app.CursorIndex >= numel(app.Months)
                     app.stopTimer();
-                    app.PlayButton.Text = 'Play';
+                    app.PlayButton.Text = char(uiText("Play"));
                     return;
                 end
                 app.setCursor(app.CursorIndex + 1);
             catch ME
                 app.stopTimer();
-                app.PlayButton.Text = 'Play';
+                app.PlayButton.Text = char(uiText("Play"));
                 app.setStatus("Replay stopped: " + ME.message);
             end
         end
@@ -997,7 +1030,7 @@ classdef NetworkBehaviorExplorer < handle
                 return;
             end
             app.stopTimer();
-            app.PlayButton.Text = 'Play';
+            app.PlayButton.Text = char(uiText("Play"));
             [f, p] = uigetfile({'*.json;*.csv;*.txt;*.tsv', 'Datasets (*.json, *.csv, *.txt, *.tsv)'}, ...
                 'Open dataset');
             figure(app.Figure);   % uigetfile can leave the app window behind

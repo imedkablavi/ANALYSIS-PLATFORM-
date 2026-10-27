@@ -63,10 +63,10 @@ if any(future)
     highlight(p, fs, ft, 'LineStyle', 'none');
 end
 score = bundle.entities.iforest_score(cand);
-scoreName = "Isolation Forest score";
+scoreName = uiText("Isolation Forest score");
 if all(isnan(score))
     score = bundle.entities.baseline_score(cand);
-    scoreName = "Baseline score";
+    scoreName = uiText("Baseline score");
 end
 cmap = th.scoreColormap(256);
 % Use a stable global scale so node colors remain comparable when the
@@ -114,7 +114,7 @@ end
 colormap(ax, cmap);
 ax.CLim = [lo hi];
 cb = colorbar(ax);
-cb.Label.String = scoreName + " (grey = not scored; ring = selected)";
+cb.Label.String = uiText("%s (grey = not scored; ring = selected)", scoreName);
 cb.Label.Color = th.color.textSecondary;
 cb.Color = th.color.textSecondary;
 cb.FontSize = th.font.small;
@@ -123,13 +123,13 @@ cb.TickDirection = 'out';
 styleAxes(ax, th);
 axis(ax, 'off');
 if hubMode
-    ttl = sprintf('%s: %d strongest of %d ties', ds.network_label, numnodes(H) - 1, deg);
+    ttl = uiText("%s: %d strongest of %d ties", uiText(ds.network_label), numnodes(H) - 1, deg);
 else
-    ttl = sprintf('%s within %d hops (%d %s, %d ties)', ds.network_label, ...
-        hops, numnodes(H), ds.entity_plural, nnz(~future));
+    ttl = uiText("%s within %d hops (%d %s, %d ties)", uiText(ds.network_label), ...
+        hops, numnodes(H), uiText(ds.entity_plural), nnz(~future));
 end
 if ~isnat(cutoffTime)
-    ttl = sprintf('%s — ties formed before %s', ttl, string(cutoffTime, ds.time_format));
+    ttl = uiText("%s — ties formed before %s", ttl, string(cutoffTime, ds.time_format));
 end
 title(ax, ttl, 'Color', th.color.text, 'FontWeight', 'normal');
 info.nodes = cand;
