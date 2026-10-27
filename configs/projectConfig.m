@@ -94,7 +94,7 @@ cfg.output.experiment_dir = fullfile("outputs","experiments");
 cfg.output.figure_dir = fullfile("outputs","figures");
 
 % --- Application -----------------------------------------------------------
-cfg.app.max_graph_nodes = 400;   % cap for interactive rendering
+cfg.app.max_graph_nodes = 150;   % cap for interactive rendering
 cfg.app.audio_cues = false;      % optional; analysis never depends on audio
 
 % --- Privacy ---------------------------------------------------------------

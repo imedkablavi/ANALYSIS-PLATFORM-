@@ -62,9 +62,13 @@ for k = 1:height(cp)
 end
 yTop = max(s.crimes) * 1.08;
 if ~isempty(entityIndex)
+    % The selected entity's events per bin, as an ink step line on the same
+    % axis (one tick mark per event does not scale to hosts with 10^5 flows).
     t = bundle.events.event_time(bundle.events.entity_index == entityIndex);
-    plot(ax, t, repmat(yTop, size(t)), '|', 'Color', th.semantic.selected, ...
-        'MarkerSize', 10, 'LineWidth', th.mark.line, ...
+    edges = [s.bin_start; s.bin_start(end) + info.bin_step];
+    own = histcounts(t, edges)';
+    stairs(ax, s.bin_start, own, '-', 'Color', th.semantic.selected, ...
+        'LineWidth', th.mark.line, ...
         'DisplayName', "Selected " + info.entity_noun + "'s " + info.event_plural);
 end
 if ~isnat(cursorTime)

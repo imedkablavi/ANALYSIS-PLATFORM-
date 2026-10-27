@@ -197,8 +197,10 @@ classdef NetworkBehaviorExplorer < handle
             app.ExplainText.Value = [header; ""; ctx.explanation; ""; ...
                 "Sequence tokens (partner state + move): " + app.tokenPreview(ctx.events.token)];
 
-            app.EventTable.Data = app.eventDisplayTable(ctx.events, ds.has_coordinates);
-            pt = ctx.partners;
+            app.EventTable.Data = app.eventDisplayTable(ctx.events, ds);
+            % Busy hosts have >100,000 partners: show the 500 strongest
+            % (ctx.partners is sorted by shared events) so the table stays fast.
+            pt = ctx.partners(1:min(500, height(ctx.partners)), :);
             app.PartnerTable.Data = table(pt.partner_id, pt.shared_crimes, ...
                 string(pt.first_time, 'yyyy-MM-dd'), string(pt.last_time, 'yyyy-MM-dd'), ...
                 round(pt.partner_iforest_score, 3), 'VariableNames', ...
@@ -744,16 +746,23 @@ classdef NetworkBehaviorExplorer < handle
             end
         end
 
-        function T = eventDisplayTable(~, ev, hasCoordinates)
+        function T = eventDisplayTable(~, ev, ds)
             % Columns present in the bundle's events table, in a fixed order.
+            % At most the first 2,000 events (a busy host has hundreds of
+            % thousands; the full list is in the exported tables).
+            ev = ev(1:min(2000, height(ev)), :);
             names = string(ev.Properties.VariableNames);
             T = table();
+            fmt = 'yyyy-MM-dd';
+            if ismember(ds.bin, ["hour", "minute"])
+                fmt = 'yyyy-MM-dd HH:mm:ss';
+            end
             if ismember("seq_pos", names), T.("#") = ev.seq_pos; end
-            if ismember("event_time", names), T.date = string(ev.event_time, 'yyyy-MM-dd'); end
+            if ismember("event_time", names), T.time = string(ev.event_time, fmt); end
             if ismember("num_offenders", names), T.participants = ev.num_offenders; end
             if ismember("token", names), T.token = ev.token; end
             if ismember("surprisal_bits", names), T.surprise_bits = round(ev.surprisal_bits, 2); end
-            if hasCoordinates && all(ismember(["x", "y"], names))
+            if ds.has_coordinates && all(ismember(["x", "y"], names))
                 T.x_norm = round(ev.x, 3);
                 T.y_norm = round(ev.y, 3);
             end
