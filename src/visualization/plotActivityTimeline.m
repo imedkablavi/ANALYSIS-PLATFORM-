@@ -24,7 +24,7 @@ end
 a = bundle.temporal.crime_anomalies;
 nounTitle = upper(extractBefore(info.event_plural, 2)) + extractAfter(info.event_plural, 1);
 
-cla(ax);
+cla(ax, 'reset');   % also hidden-handle objects and manual limits of a previous dataset
 axis(ax, 'on');
 hold(ax, 'on');
 plot(ax, s.bin_start, s.crimes, '-', 'Color', th.semantic.series, ...

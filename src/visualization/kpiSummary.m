@@ -76,7 +76,10 @@ if ~isnan(nMonths)
 end
 
 keys = ["entities", "events", "scored", "flagged", "unusual_months", "quality"];
-labels = ["Entities", "Events", "Scored", "Flagged", "Unusual periods", "Data quality"];
+info = bundleDatasetInfo(bundle);
+cap = @(w) upper(extractBefore(w, 2)) + extractAfter(w, 1);
+labels = [cap(info.entity_plural), cap(info.event_plural), "Scored", "Flagged", ...
+    "Unusual periods", "Data quality"];
 values = [kpi.entities, kpi.events, kpi.scored, kpi.flagged, kpi.unusual_months, kpi.warnings];
 details = ["", "", scoredDetail, "either detector", monthsDetail, "validation checks"];
 tiles = struct('key', {}, 'label', {}, 'value', {}, 'value_text', {}, ...

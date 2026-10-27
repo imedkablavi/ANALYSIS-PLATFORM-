@@ -18,7 +18,7 @@ if height(e) == 0 || all(isnan(e.iforest_score))
         "(not run, or no entity has enough history)."], th);
     return;
 end
-cla(ax);
+cla(ax, 'reset');   % also hidden-handle objects and manual limits of a previous dataset
 axis(ax, 'on');
 legend(ax, 'off');
 hold(ax, 'on');

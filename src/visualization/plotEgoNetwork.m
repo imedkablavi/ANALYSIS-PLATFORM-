@@ -22,11 +22,24 @@ if nargin < 6, cutoffTime = NaT; end
 th = appTheme();
 ds = bundleDatasetInfo(bundle);
 G = bundle.graph;
-d = distances(G, entityIndex, 'Method', 'unweighted');
-cand = find(isfinite(d) & d <= hops);
-[~, order] = sort(d(cand));
-cand = cand(order);
-cand = cand(1:min(maxNodes, numel(cand)));
+hubLimit = 60;                 % neighbours shown around a hub
+deg = degree(G, entityIndex);
+hubMode = deg > hubLimit;
+if hubMode
+    % A hub (gateway, server, scanner) has thousands of neighbours: a
+    % 2-hop view is an unreadable hairball. Show its strongest ties only.
+    [eid, nid] = outedges(G, entityIndex);
+    [~, order] = sort(G.Edges.Weight(eid), 'descend');
+    keep = order(1:min(hubLimit, numel(order)));
+    cand = [entityIndex; nid(keep)];
+    hops = 1;
+else
+    d = distances(G, entityIndex, 'Method', 'unweighted');
+    cand = find(isfinite(d) & d <= hops);
+    [~, order] = sort(d(cand));
+    cand = cand(order);
+    cand = cand(1:min(maxNodes, numel(cand)));
+end
 % Ascending order makes node k of H correspond to cand(k) regardless of
 % whether subgraph keeps or sorts the requested order.
 cand = sort(cand(:));
@@ -36,7 +49,7 @@ if ~isnat(cutoffTime) && numedges(H) > 0
     future = H.Edges.FirstTime >= cutoffTime;
 end
 
-cla(ax);
+cla(ax, 'reset');   % also hidden-handle objects and manual limits of a previous dataset
 legend(ax, 'off');
 if numedges(H) > 0
     lw = 0.5 + 1.5 * log1p(H.Edges.Weight) / log1p(max(H.Edges.Weight));
@@ -79,7 +92,10 @@ pos = round((score - lo) / (hi - lo) * 255) + 1;
 colors = repmat(th.semantic.unscored, numel(cand), 1);
 ok = ~isnan(pos);
 colors(ok, :) = cmap(min(max(pos(ok), 1), 256), :);
-sizes = 3 + 2 * sqrt(bundle.entities.event_count(cand));
+% Size grows with log(event count) and stays between 4 and 14 points: a
+% sqrt scale made a host with 186,952 flows a marker covering the axes.
+cnt = log1p(bundle.entities.event_count(cand));
+sizes = 4 + 10 * cnt / max(max(cnt), eps);
 self = find(cand == entityIndex, 1);
 if ~isempty(self)
     sizes(self) = max(sizes(self), 9);
@@ -106,8 +122,12 @@ cb.Box = 'off';
 cb.TickDirection = 'out';
 styleAxes(ax, th);
 axis(ax, 'off');
-ttl = sprintf('%s within %d hops (%d %s, %d ties)', ds.network_label, ...
-    hops, numnodes(H), ds.entity_plural, nnz(~future));
+if hubMode
+    ttl = sprintf('%s: %d strongest of %d ties', ds.network_label, numnodes(H) - 1, deg);
+else
+    ttl = sprintf('%s within %d hops (%d %s, %d ties)', ds.network_label, ...
+        hops, numnodes(H), ds.entity_plural, nnz(~future));
+end
 if ~isnat(cutoffTime)
     ttl = sprintf('%s — ties formed before %s', ttl, string(cutoffTime, ds.time_format));
 end

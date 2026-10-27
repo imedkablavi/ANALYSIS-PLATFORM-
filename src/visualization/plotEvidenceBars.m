@@ -13,7 +13,7 @@ if height(ev) == 0
         "This is not a statement that the behaviour is normal."], th);
     return;
 end
-cla(ax);
+cla(ax, 'reset');   % also hidden-handle objects and manual limits of a previous dataset
 axis(ax, 'on');
 legend(ax, 'off');
 hold(ax, 'on');

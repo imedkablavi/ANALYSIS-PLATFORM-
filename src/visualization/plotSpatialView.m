@@ -23,7 +23,7 @@ if ~info.has_coordinates || ~isfield(bundle, 'spatial') || ~isfield(bundle.spati
     return;
 end
 
-cla(ax);
+cla(ax, 'reset');   % also hidden-handle objects and manual limits of a previous dataset
 axis(ax, 'on');
 legend(ax, 'off');
 g = bundle.spatial.grid;

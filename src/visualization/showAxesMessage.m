@@ -9,7 +9,7 @@ function showAxesMessage(ax, msg, theme)
 if nargin < 3 || isempty(theme)
     theme = appTheme();
 end
-cla(ax);
+cla(ax, 'reset');   % also hidden-handle objects and manual limits of a previous dataset
 legend(ax, 'off');
 colorbar(ax, 'off');
 title(ax, '');

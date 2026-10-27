@@ -55,6 +55,7 @@ classdef NetworkBehaviorExplorer < handle
         % Sidebar
         KpiValues
         KpiDetails
+        KpiTitles
         QualityDot
         SearchField
         FilterDrop
@@ -197,7 +198,7 @@ classdef NetworkBehaviorExplorer < handle
                 string(p.entity_id), ctx.status, ds.event_plural, app.profileValue(p, 'event_count'), ...
                 app.profileValue(p, 'degree'), app.profileValue(p, 'component_size'));
             app.ExplainText.Value = [header; ""; ctx.explanation; ""; ...
-                "Sequence tokens (partner state + move): " + joinStrings(ctx.events.token, " ")];
+                "Sequence tokens (partner state + move): " + app.tokenPreview(ctx.events.token)];
 
             app.EventTable.Data = app.eventDisplayTable(ctx.events, ds.has_coordinates);
             pt = ctx.partners;
@@ -309,8 +310,8 @@ classdef NetworkBehaviorExplorer < handle
                 'FontName', th.font.family, 'FontSize', th.font.base, ...
                 'ValueChangedFcn', @(src, evt) app.onDatasetChosen(src, evt));
             app.OpenButton = uibutton(h, 'Text', ['Open dataset' char(8230)], ...
-                'FontName', th.font.family, 'FontSize', th.font.base, 'FontWeight', 'bold', ...
-                'BackgroundColor', th.color.accent, 'FontColor', th.color.accentText, ...
+                'FontName', th.font.family, 'FontSize', th.font.base, ...
+                'BackgroundColor', th.color.surface, 'FontColor', th.color.text, ...
                 'Tooltip', 'Import a JSON or CSV dataset and analyse it', ...
                 'ButtonPushedFcn', @(~, ~) app.openDataset());
             app.ExportButton = uibutton(h, 'Text', 'Export', ...
@@ -331,7 +332,7 @@ classdef NetworkBehaviorExplorer < handle
             s.RowSpacing = 6;
             app.setIf(s, 'BackgroundColor', th.color.surface);
 
-            app.label(s, "OVERVIEW", th.font.small, th.color.textSecondary, 'bold');
+            app.label(s, "Overview", th.font.base, th.color.text, 'bold');
             k = uigridlayout(s, [3 2]);
             k.RowHeight = {'1x', '1x', '1x'};
             k.ColumnWidth = {'1x', '1x'};
@@ -342,16 +343,18 @@ classdef NetworkBehaviorExplorer < handle
             labels = ["Entities", "Events", "Scored", "Flagged", "Unusual periods", "Data quality"];
             app.KpiValues = gobjects(1, numel(labels));
             app.KpiDetails = gobjects(1, numel(labels));
+            app.KpiTitles = gobjects(1, numel(labels));
             for i = 1:numel(labels)
-                [valueLabel, detailLabel, dot] = app.kpiTile(k, labels(i), i == numel(labels));
+                [valueLabel, detailLabel, dot, titleLabel] = app.kpiTile(k, labels(i), i == numel(labels));
                 app.KpiValues(i) = valueLabel;
                 app.KpiDetails(i) = detailLabel;
+                app.KpiTitles(i) = titleLabel;
                 if ~isempty(dot)
                     app.QualityDot = dot;
                 end
             end
 
-            app.label(s, "RANKING", th.font.small, th.color.textSecondary, 'bold');
+            app.label(s, "Ranking", th.font.base, th.color.text, 'bold');
             app.SearchField = uieditfield(s, 'text', 'FontName', th.font.family, ...
                 'FontSize', th.font.base, ...
                 'ValueChangingFcn', @(~, evt) app.onSearch(evt.Value), ...
@@ -367,16 +370,24 @@ classdef NetworkBehaviorExplorer < handle
                 'Base score', 'Events', 'Main group'};
         end
 
-        function [valueLabel, detailLabel, dot] = kpiTile(app, parent, labelText, isStatus)
+        function s = tokenPreview(~, tokens)
+            % At most 40 tokens: a busy host has hundreds of thousands.
+            n = numel(tokens);
+            s = joinStrings(tokens(1:min(n, 40)), " ");
+            if n > 40
+                s = s + sprintf(" ... (%d more)", n - 40);
+            end
+        end
+
+        function [valueLabel, detailLabel, dot, titleLabel] = kpiTile(app, parent, labelText, isStatus)
             th = app.Theme;
-            tile = uipanel(parent, 'BackgroundColor', th.color.surface, 'BorderType', 'line');
-            app.setIf(tile, 'BorderColor', th.color.border);
+            tile = uipanel(parent, 'BackgroundColor', th.color.surface, 'BorderType', 'none');
             t = uigridlayout(tile, [3 1]);
             t.RowHeight = {14, '1x', 14};
             t.Padding = [8 4 8 4];
             t.RowSpacing = 0;
             app.setIf(t, 'BackgroundColor', th.color.surface);
-            app.label(t, labelText, th.font.small, th.color.textSecondary, 'normal');
+            titleLabel = app.label(t, labelText, th.font.small, th.color.textSecondary, 'normal');
             dot = [];
             if isStatus
                 row = uigridlayout(t, [1 2]);
@@ -457,8 +468,8 @@ classdef NetworkBehaviorExplorer < handle
             app.StepButton = app.plainButton(r, 'Step', 'Advance one month', ...
                 @(~, ~) app.setCursor(app.CursorIndex + 1));
             app.PlayButton = uibutton(r, 'Text', 'Play', 'FontName', th.font.family, ...
-                'FontSize', th.font.base, 'FontWeight', 'bold', ...
-                'BackgroundColor', th.color.accent, 'FontColor', th.color.accentText, ...
+                'FontSize', th.font.base, ...
+                'BackgroundColor', th.color.surface, 'FontColor', th.color.text, ...
                 'Tooltip', 'Play / pause the month-by-month replay', ...
                 'ButtonPushedFcn', @(~, ~) app.togglePlay());
             app.TimeSlider = uislider(r, 'Limits', [1 2], 'Value', 1, ...
@@ -569,6 +580,7 @@ classdef NetworkBehaviorExplorer < handle
             kpi = kpiSummary(b);
             for i = 1:numel(kpi.tiles)
                 app.KpiValues(i).Text = char(kpi.tiles(i).value_text);
+                app.KpiTitles(i).Text = char(kpi.tiles(i).label);
                 app.KpiDetails(i).Text = char(kpi.tiles(i).detail);
             end
             q = kpi.tiles(end);
