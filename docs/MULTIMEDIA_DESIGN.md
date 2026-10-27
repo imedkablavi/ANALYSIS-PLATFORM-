@@ -189,3 +189,15 @@ Implemented, **not yet executed** (no MATLAB in the development environment; MIS
 The dataset UI codes against the `inspectDatasetFile` / `analyzeDataset` / `listDatasets`
 contract; when those functions are not on the path, "Open dataset…" explains that import is
 unavailable and the catalog shows only the primary bundle.
+
+## Layout revision 2026-10-27 (after the first real screenshot)
+
+Feedback: the dashboard look (KPI tiles, filled accent buttons, bordered cards) read as
+generic and the network view was unreadable on a 178,501-host capture. The layout is now plain:
+one header row (title, dataset, format; dataset list, Open, Export), one summary line in text
+(hosts · flows · scored · flagged · unusual periods · data quality) instead of six tiles, the
+ranking on the left, network and detail tabs side by side, and the timeline across the full width
+with its replay controls directly underneath. The relative-space view moved into a "Space" tab
+(most network datasets have no coordinates). White page, no panel borders, neutral buttons.
+Hubs show their 60 strongest ties; node size is log-scaled and bounded.
+

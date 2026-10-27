@@ -53,10 +53,7 @@ classdef NetworkBehaviorExplorer < handle
         OpenButton
         ExportButton
         % Sidebar
-        KpiValues
-        KpiDetails
-        KpiTitles
-        QualityDot
+        SummaryLabel
         SearchField
         FilterDrop
         RankCountLabel
@@ -266,107 +263,86 @@ classdef NetworkBehaviorExplorer < handle
     methods (Access = private)
         %% ---------------------------------------------------------- layout
         function buildUi(app)
+            % Layout (deliberately plain: one summary line instead of
+            % dashboard tiles, white page, panels separated by space):
+            %   header  | title · dataset · format          dataset ▾  Open  Export
+            %   summary | hosts · flows · scored · flagged · unusual · quality
+            %   ranking | network            | details (tabs)
+            %           | timeline + replay controls (full width)
+            %   status line
             th = app.Theme;
-            app.Figure = uifigure('Name', 'Network Behaviour Explorer — statistical deviation analysis', ...
-                'Position', [40 40 1560 940], 'Color', th.color.page);
+            app.Figure = uifigure('Name', 'Network Behaviour Explorer', ...
+                'Position', [40 40 1560 940], 'Color', th.color.surface);
             app.Figure.CloseRequestFcn = @(~, ~) delete(app);
             app.MainGrid = uigridlayout(app.Figure, [4 2]);
             g = app.MainGrid;
-            g.RowHeight = {56, '1x', 52, 24};
-            g.ColumnWidth = {390, '1x'};
-            g.Padding = [10 6 10 6];
-            g.RowSpacing = 8;
-            g.ColumnSpacing = 10;
-            app.setIf(g, 'BackgroundColor', th.color.page);
+            g.RowHeight = {40, 22, '1x', 20};
+            g.ColumnWidth = {360, '1x'};
+            g.Padding = [14 8 14 6];
+            g.RowSpacing = 6;
+            g.ColumnSpacing = 14;
+            app.setIf(g, 'BackgroundColor', th.color.surface);
 
             app.buildHeader();
+            app.buildSummary();
             app.buildSidebar();
             app.buildMainArea();
-            app.buildReplayBar();
             app.buildStatusBar();
         end
 
         function buildHeader(app)
             th = app.Theme;
-            panel = app.card(app.MainGrid, "");
-            panel.Layout.Row = 1;
-            panel.Layout.Column = [1 2];
-            h = uigridlayout(panel, [1 8]);
-            h.ColumnWidth = {'fit', 'fit', 'fit', '1x', 'fit', 280, 130, 90};
+            h = uigridlayout(app.MainGrid, [1 7]);
+            h.Layout.Row = 1;
+            h.Layout.Column = [1 2];
+            h.ColumnWidth = {'fit', 'fit', 'fit', '1x', 300, 120, 80};
             h.RowHeight = {'1x'};
-            h.Padding = [12 6 12 6];
-            h.ColumnSpacing = 10;
-            app.setIf(h, 'BackgroundColor', th.color.header);
+            h.Padding = [0 0 0 0];
+            h.ColumnSpacing = 12;
+            app.setIf(h, 'BackgroundColor', th.color.surface);
             app.label(h, "Network Behaviour Explorer", th.font.header, th.color.text, 'bold');
-            app.DatasetLabel = app.label(h, "No dataset loaded", th.font.base, ...
-                th.color.textSecondary, 'normal');
-            app.FormatBadge = app.label(h, "", th.font.small, th.color.text, 'normal');
-            app.FormatBadge.HorizontalAlignment = 'center';
-            app.FormatBadge.BackgroundColor = th.color.badge;
+            app.DatasetLabel = app.label(h, "No dataset loaded", th.font.base, th.color.text, 'normal');
+            app.FormatBadge = app.label(h, "", th.font.small, th.color.textSecondary, 'normal');
             app.label(h, "", th.font.small, th.color.text, 'normal');
-            lbl = app.label(h, "Dataset", th.font.base, th.color.textSecondary, 'normal');
-            lbl.HorizontalAlignment = 'right';
             app.DatasetDrop = uidropdown(h, 'Items', {'(no datasets)'}, 'ItemsData', {''}, ...
                 'FontName', th.font.family, 'FontSize', th.font.base, ...
+                'Tooltip', 'Analysed datasets', ...
                 'ValueChangedFcn', @(src, evt) app.onDatasetChosen(src, evt));
-            app.OpenButton = uibutton(h, 'Text', ['Open dataset' char(8230)], ...
-                'FontName', th.font.family, 'FontSize', th.font.base, ...
-                'BackgroundColor', th.color.surface, 'FontColor', th.color.text, ...
-                'Tooltip', 'Import a JSON or CSV dataset and analyse it', ...
-                'ButtonPushedFcn', @(~, ~) app.openDataset());
-            app.ExportButton = uibutton(h, 'Text', 'Export', ...
-                'FontName', th.font.family, 'FontSize', th.font.base, ...
-                'BackgroundColor', th.color.surface, 'FontColor', th.color.text, ...
-                'Tooltip', 'Save PNGs of the views and the evidence text to outputs/', ...
-                'ButtonPushedFcn', @(~, ~) app.exportViews());
+            app.OpenButton = app.plainButton(h, ['Open dataset' char(8230)], ...
+                'Import a dataset file and analyse it', @(~, ~) app.openDataset());
+            app.ExportButton = app.plainButton(h, 'Export', ...
+                'Save PNGs of the views and the evidence text to outputs/', @(~, ~) app.exportViews());
+        end
+
+        function buildSummary(app)
+            th = app.Theme;
+            app.SummaryLabel = app.label(app.MainGrid, "", th.font.base, th.color.textSecondary, 'normal');
+            app.SummaryLabel.Layout.Row = 2;
+            app.SummaryLabel.Layout.Column = [1 2];
         end
 
         function buildSidebar(app)
             th = app.Theme;
-            panel = app.card(app.MainGrid, "");
-            panel.Layout.Row = 2;
-            panel.Layout.Column = 1;
-            s = uigridlayout(panel, [7 1]);
-            s.RowHeight = {18, 210, 18, 26, 26, 16, '1x'};
-            s.Padding = [10 10 10 10];
+            s = uigridlayout(app.MainGrid, [5 1]);
+            s.Layout.Row = 3;
+            s.Layout.Column = 1;
+            s.RowHeight = {20, 26, 26, 16, '1x'};
+            s.Padding = [0 0 0 0];
             s.RowSpacing = 6;
             app.setIf(s, 'BackgroundColor', th.color.surface);
-
-            app.label(s, "Overview", th.font.base, th.color.text, 'bold');
-            k = uigridlayout(s, [3 2]);
-            k.RowHeight = {'1x', '1x', '1x'};
-            k.ColumnWidth = {'1x', '1x'};
-            k.Padding = [0 0 0 0];
-            k.RowSpacing = 6;
-            k.ColumnSpacing = 6;
-            app.setIf(k, 'BackgroundColor', th.color.surface);
-            labels = ["Entities", "Events", "Scored", "Flagged", "Unusual periods", "Data quality"];
-            app.KpiValues = gobjects(1, numel(labels));
-            app.KpiDetails = gobjects(1, numel(labels));
-            app.KpiTitles = gobjects(1, numel(labels));
-            for i = 1:numel(labels)
-                [valueLabel, detailLabel, dot, titleLabel] = app.kpiTile(k, labels(i), i == numel(labels));
-                app.KpiValues(i) = valueLabel;
-                app.KpiDetails(i) = detailLabel;
-                app.KpiTitles(i) = titleLabel;
-                if ~isempty(dot)
-                    app.QualityDot = dot;
-                end
-            end
-
-            app.label(s, "Ranking", th.font.base, th.color.text, 'bold');
+            app.label(s, "Ranking", th.font.title, th.color.text, 'bold');
             app.SearchField = uieditfield(s, 'text', 'FontName', th.font.family, ...
                 'FontSize', th.font.base, ...
                 'ValueChangingFcn', @(~, evt) app.onSearch(evt.Value), ...
                 'ValueChangedFcn', @(src, ~) app.onSearch(src.Value));
-            app.setIf(app.SearchField, 'Placeholder', 'Search entity ID');
+            app.setIf(app.SearchField, 'Placeholder', 'Search ID');
             app.FilterDrop = uidropdown(s, 'Items', app.FilterItems, ...
                 'FontName', th.font.family, 'FontSize', th.font.base, ...
                 'ValueChangedFcn', @(~, ~) app.fillRanking());
             app.RankCountLabel = app.label(s, "", th.font.small, th.color.textSecondary, 'normal');
             app.RankTable = uitable(s, 'CellSelectionCallback', @(~, evt) app.onRankSelect(evt));
             app.styleTable(app.RankTable);
-            app.RankTable.ColumnName = {'Entity', 'IF rank', 'IF score', 'Base rank', ...
+            app.RankTable.ColumnName = {'ID', 'IF rank', 'IF score', 'Base rank', ...
                 'Base score', 'Events', 'Main group'};
         end
 
@@ -379,51 +355,25 @@ classdef NetworkBehaviorExplorer < handle
             end
         end
 
-        function [valueLabel, detailLabel, dot, titleLabel] = kpiTile(app, parent, labelText, isStatus)
-            th = app.Theme;
-            tile = uipanel(parent, 'BackgroundColor', th.color.surface, 'BorderType', 'none');
-            t = uigridlayout(tile, [3 1]);
-            t.RowHeight = {14, '1x', 14};
-            t.Padding = [8 4 8 4];
-            t.RowSpacing = 0;
-            app.setIf(t, 'BackgroundColor', th.color.surface);
-            titleLabel = app.label(t, labelText, th.font.small, th.color.textSecondary, 'normal');
-            dot = [];
-            if isStatus
-                row = uigridlayout(t, [1 2]);
-                row.ColumnWidth = {16, '1x'};
-                row.Padding = [0 0 0 0];
-                row.ColumnSpacing = 4;
-                app.setIf(row, 'BackgroundColor', th.color.surface);
-                dot = app.label(row, string(char(9679)), th.font.header, th.color.textMuted, 'normal');
-                valueLabel = app.label(row, "—", th.font.base + 2, th.color.text, 'bold');
-            else
-                valueLabel = app.label(t, "—", th.font.kpi, th.color.text, 'bold');
-            end
-            detailLabel = app.label(t, "", th.font.small, th.color.textSecondary, 'normal');
-        end
-
         function buildMainArea(app)
             th = app.Theme;
             m = uigridlayout(app.MainGrid, [2 2]);
-            m.Layout.Row = 2;
+            m.Layout.Row = 3;
             m.Layout.Column = 2;
-            m.RowHeight = {'1x', '1x'};
+            m.RowHeight = {'1.2x', '1x'};
             m.ColumnWidth = {'1x', '1x'};
             m.Padding = [0 0 0 0];
-            m.RowSpacing = 8;
-            m.ColumnSpacing = 8;
-            app.setIf(m, 'BackgroundColor', th.color.page);
+            m.RowSpacing = 10;
+            m.ColumnSpacing = 14;
+            app.setIf(m, 'BackgroundColor', th.color.surface);
 
             app.NetAxes = app.axesPanel(m, "Network", 1, 1);
-            app.MapAxes = app.axesPanel(m, "Relative space", 1, 2);
-            app.TimeAxes = app.axesPanel(m, "Timeline", 2, 1);
 
             dp = app.card(m, "Details");
-            dp.Layout.Row = 2;
+            dp.Layout.Row = 1;
             dp.Layout.Column = 2;
             dg = uigridlayout(dp, [1 1]);
-            dg.Padding = [4 4 4 4];
+            dg.Padding = [0 0 0 0];
             app.setIf(dg, 'BackgroundColor', th.color.surface);
             app.Tabs = uitabgroup(dg);
             g1 = app.tabGrid("Why flagged");
@@ -438,6 +388,8 @@ classdef NetworkBehaviorExplorer < handle
             g4 = app.tabGrid("Partners");
             app.PartnerTable = uitable(g4, 'CellSelectionCallback', @(~, evt) app.onPartnerSelect(evt));
             app.styleTable(app.PartnerTable);
+            g9 = app.tabGrid("Space");
+            app.MapAxes = app.themedAxes(g9);
             g5 = app.tabGrid("Patterns");
             app.PatternTable = uitable(g5);
             app.styleTable(app.PatternTable);
@@ -449,41 +401,46 @@ classdef NetworkBehaviorExplorer < handle
             g7 = app.tabGrid("Data quality");
             app.QualityTable = uitable(g7);
             app.styleTable(app.QualityTable);
+
+            % Timeline with its replay controls directly underneath.
+            tp = app.card(m, "Timeline");
+            tp.Layout.Row = 2;
+            tp.Layout.Column = [1 2];
+            tg = uigridlayout(tp, [2 1]);
+            tg.RowHeight = {'1x', 30};
+            tg.Padding = [0 0 0 0];
+            tg.RowSpacing = 4;
+            app.setIf(tg, 'BackgroundColor', th.color.surface);
+            app.TimeAxes = app.themedAxes(tg);
+            app.buildReplayBar(tg);
         end
 
-        function buildReplayBar(app)
+        function buildReplayBar(app, parent)
             th = app.Theme;
-            panel = app.card(app.MainGrid, "");
-            panel.Layout.Row = 3;
-            panel.Layout.Column = [1 2];
-            r = uigridlayout(panel, [1 9]);
-            r.ColumnWidth = {'fit', 70, 70, 80, '1x', 'fit', 70, 'fit', 430};
+            r = uigridlayout(parent, [1 8]);
+            r.ColumnWidth = {64, 64, 64, '1x', 'fit', 64, 'fit', 420};
             r.RowHeight = {'1x'};
-            r.Padding = [12 4 12 4];
+            r.Padding = [0 0 0 0];
             r.ColumnSpacing = 10;
             app.setIf(r, 'BackgroundColor', th.color.surface);
-            app.label(r, "REPLAY", th.font.small, th.color.textSecondary, 'bold');
-            app.ResetButton = app.plainButton(r, 'Reset', 'Back to the first month', ...
+            app.ResetButton = app.plainButton(r, 'Reset', 'Back to the first period', ...
                 @(~, ~) app.setCursor(1));
-            app.StepButton = app.plainButton(r, 'Step', 'Advance one month', ...
+            app.StepButton = app.plainButton(r, 'Step', 'Advance one period', ...
                 @(~, ~) app.setCursor(app.CursorIndex + 1));
-            app.PlayButton = uibutton(r, 'Text', 'Play', 'FontName', th.font.family, ...
-                'FontSize', th.font.base, ...
-                'BackgroundColor', th.color.surface, 'FontColor', th.color.text, ...
-                'Tooltip', 'Play / pause the month-by-month replay', ...
-                'ButtonPushedFcn', @(~, ~) app.togglePlay());
+            app.PlayButton = app.plainButton(r, 'Play', 'Play / pause the replay', ...
+                @(~, ~) app.togglePlay());
             app.TimeSlider = uislider(r, 'Limits', [1 2], 'Value', 1, ...
                 'MajorTicks', [], 'MinorTicks', [], ...
                 'ValueChangedFcn', @(s, ~) app.setCursor(s.Value));
-            app.label(r, "Window (periods)", th.font.base, th.color.textSecondary, 'normal');
+            app.label(r, "Window", th.font.base, th.color.textSecondary, 'normal');
             app.WindowSpinner = uispinner(r, 'Limits', [1 120], 'Value', 12, ...
                 'Tooltip', 'Window length in timeline bins (months, weeks, days, hours or minutes)', ...
                 'FontName', th.font.family, 'FontSize', th.font.base, ...
                 'ValueChangedFcn', @(~, ~) app.setCursor(app.CursorIndex));
-            app.AudioBox = uicheckbox(r, 'Text', 'Audio cue', 'Value', false, ...
+            app.AudioBox = uicheckbox(r, 'Text', 'Sound', 'Value', false, ...
                 'FontName', th.font.family, 'FontSize', th.font.base, ...
                 'FontColor', th.color.textSecondary);
-            app.TimeLabel = app.label(r, "", th.font.base, th.color.text, 'normal');
+            app.TimeLabel = app.label(r, "", th.font.small, th.color.textSecondary, 'normal');
         end
 
         function buildStatusBar(app)
@@ -493,19 +450,18 @@ classdef NetworkBehaviorExplorer < handle
             s.Layout.Column = [1 2];
             s.ColumnWidth = {'1x', '1x', 'fit'};
             s.RowHeight = {'1x'};
-            s.Padding = [4 0 4 0];
-            app.setIf(s, 'BackgroundColor', th.color.page);
+            s.Padding = [0 0 0 0];
+            app.setIf(s, 'BackgroundColor', th.color.surface);
             app.StatusLabel = app.label(s, "Ready.", th.font.small, th.color.textSecondary, 'normal');
             app.SelectionLabel = app.label(s, "No selection", th.font.small, th.color.text, 'normal');
             d = app.label(s, app.Disclaimer, th.font.small, th.color.textSecondary, 'normal');
-            d.FontAngle = 'italic';
             d.HorizontalAlignment = 'right';
         end
 
         %% -------------------------------------------------- layout helpers
         function p = card(app, parent, titleText)
             th = app.Theme;
-            p = uipanel(parent, 'BackgroundColor', th.color.surface, 'BorderType', 'line', ...
+            p = uipanel(parent, 'BackgroundColor', th.color.surface, 'BorderType', 'none', ...
                 'FontName', th.font.family, 'FontSize', th.font.title, 'FontWeight', 'bold', ...
                 'ForegroundColor', th.color.text);
             if strlength(titleText) > 0
@@ -519,7 +475,7 @@ classdef NetworkBehaviorExplorer < handle
             p.Layout.Row = row;
             p.Layout.Column = col;
             g = uigridlayout(p, [1 1]);
-            g.Padding = [6 6 6 6];
+            g.Padding = [0 0 0 0];
             app.setIf(g, 'BackgroundColor', app.Theme.color.surface);
             ax = app.themedAxes(g);
         end
@@ -574,21 +530,23 @@ classdef NetworkBehaviorExplorer < handle
             th = app.Theme;
             ds = bundleDatasetInfo(b);
             app.DatasetLabel.Text = char(ds.name);
-            app.FormatBadge.Text = char("  " + ds.format + "  ");
+            app.FormatBadge.Text = char(ds.format);
             app.setControlsEnabled(true);
 
+            % One plain summary line instead of dashboard tiles.
             kpi = kpiSummary(b);
-            for i = 1:numel(kpi.tiles)
-                app.KpiValues(i).Text = char(kpi.tiles(i).value_text);
-                app.KpiTitles(i).Text = char(kpi.tiles(i).label);
-                app.KpiDetails(i).Text = char(kpi.tiles(i).detail);
+            parts = strings(1, 0);
+            for i = 1:numel(kpi.tiles) - 1
+                t = kpi.tiles(i);
+                parts(end+1) = t.value_text + " " + lower(t.label); %#ok<AGROW>
             end
             q = kpi.tiles(end);
-            if q.status == ""
-                app.QualityDot.FontColor = th.color.textMuted;
+            parts(end+1) = "data quality: " + lower(q.value_text);
+            app.SummaryLabel.Text = char(joinStrings(parts, "   ·   "));
+            if q.status == "critical"
+                app.SummaryLabel.FontColor = th.status.critical;
             else
-                app.QualityDot.FontColor = th.status.(char(q.status));
-                app.KpiValues(end).Text = char(th.status.icon.(char(q.status)) + " " + q.value_text);
+                app.SummaryLabel.FontColor = th.color.textSecondary;
             end
 
             app.Months = NaT(0, 1);
@@ -661,11 +619,7 @@ classdef NetworkBehaviorExplorer < handle
             app.Selected = [];
             app.DatasetLabel.Text = 'No dataset loaded';
             app.FormatBadge.Text = '';
-            for i = 1:numel(app.KpiValues)
-                app.KpiValues(i).Text = '—';
-                app.KpiDetails(i).Text = '';
-            end
-            app.QualityDot.FontColor = th.color.textMuted;
+            app.SummaryLabel.Text = '';
             app.RankTable.Data = table();
             app.RankCountLabel.Text = '';
             invite = ["No dataset loaded."; "Use Open dataset to import a JSON or CSV file,"; ...
