@@ -1,77 +1,33 @@
-# 30-Day Roadmap
+# Roadmap (recalculated 2026-09-30)
 
-## Days 1–3 — Scope and dataset
-- freeze assignment interpretation,
-- verify dataset license/terms,
-- download primary candidate,
-- inspect schema,
-- create dataset card.
+The analytical core, experiments and application are implemented but **unexecuted**. The remaining
+plan front-loads execution risk, then evaluation, then presentation.
 
-**Gate:** data can be loaded in MATLAB.
+## Week 1 (Oct 1–7) — Execution gate
+- Transcribe the assignment wording (T-001) and confirm scope (T-002).
+- `run_tests.m`: fix every runtime failure until all fixture tests pass.
+- Download dataset; `test_real_dataset` must reproduce the reference audit values.
+- `run_pipeline.m` on real data; read the validation report; record timings.
+- **Gate:** tests green, bundle produced, validation report committed as evidence in RESEARCH_LOG.
 
-## Days 4–7 — Data pipeline
-- validation,
-- cleaning,
-- normalization,
-- entity/event tables,
-- first exploratory plots.
+## Week 2 (Oct 8–14) — Evaluation
+- `run_experiments.m` (QUICK, then full); record E1–E9 numbers in RESEARCH_LOG.
+- T-043 seasonal baseline; compare July flags before/after.
+- Review top-ranked explanations manually for wording and plausibility (no identity claims).
+- Regenerate figures.
+- **Gate:** experiments_summary.md produced and interpreted; limitations updated.
 
-**Gate:** reproducible `run_pipeline` works.
+## Week 3 (Oct 15–21) — Application and demo
+- Launch the app; walk through DEMO_SCENARIO; fix interaction/performance issues.
+- Usability study E10 (5–8 participants).
+- **Gate:** demo runs end-to-end twice without intervention.
 
-## Days 8–12 — Feature engineering
-- temporal features,
-- network features,
-- optional spatial features,
-- sequence representation,
-- feature quality checks.
-
-**Gate:** versioned feature matrix generated.
-
-## Days 13–16 — Baseline analysis
-- statistical anomaly baseline,
-- graph metrics,
-- initial pattern mining,
-- baseline visualization.
-
-**Gate:** first measurable anomaly result.
-
-## Days 17–20 — ML and explainability
-- Isolation Forest,
-- threshold evaluation,
-- feature ablation,
-- evidence generation.
-
-**Gate:** reproducible experiment report.
-
-## Days 21–25 — MATLAB App Designer
-- dashboard,
-- network view,
-- timeline,
-- entity detail,
-- filtering,
-- replay.
-
-**Gate:** app can inspect at least one detected anomaly end-to-end.
-
-## Days 26–27 — Multimedia refinement
-- animation polish,
-- heatmap/spatial view if supported,
-- optional audio cues,
-- accessibility/readability checks.
-
-## Days 28–29 — Final validation
-- clean clone test,
-- performance check,
-- regression test,
-- screenshots,
-- demo dataset package if allowed.
-
-## Day 30 — Delivery
-- final report,
-- presentation,
-- demo script,
-- GitHub cleanup,
-- release tag.
+## Week 4 (Oct 22–30) — Delivery
+- Technical report (structure: introduction, data & validation, methodology, experiments,
+  results, multimedia system, evaluation, ethics & limitations, conclusion).
+- Presentation + recorded demo backup.
+- Clean-clone test on a second machine; README/CHANGELOG; release tag.
 
 ## Scope rule
-If a task threatens the core pipeline, cut optional features before cutting data quality, evaluation, or explainability.
+If time runs short, cut in this order: audio cue → pattern tab polish → E8 grid size → synthetic
+repeats. Never cut validation, the eligibility rule, explanations or the ethics statements.

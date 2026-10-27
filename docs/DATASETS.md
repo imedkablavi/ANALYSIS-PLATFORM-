@@ -22,6 +22,11 @@ Verified artifact facts:
 - observed dates: 2010-12-01 through 2020-09-28
 - normalized X/Y values in [0,1]
 - edge weights observed in [1,37]
+- all links reciprocal (10,651 undirected relations); weight = number of shared crimes
+- day-resolution dates; data are solved cases (recent months right-censored)
+
+Licence: BSD-3-Clause-style (Consortium Board ROXANNE, 2021). Citation: Ahmadi et al. (2023),
+*Journal of Computational Science* 72, 102063 — see `data/DATASET_CARD.md`.
 
 Full schema inspection:
 `docs/DATASET_SCHEMA_INSPECTION.md`
@@ -56,16 +61,7 @@ The same upstream repository documents:
 
 These remain secondary until a schema/value-add gate is passed.
 
-## Switching rule
-
-Do not switch the primary dataset unless it fails a documented gate for:
-
-1. accessibility,
-2. legal/usage terms,
-3. schema completeness,
-4. temporal availability,
-5. analytical relevance,
-6. computational feasibility,
-7. evaluation feasibility.
-
-Record every change in `docs/RESEARCH_LOG.md`.
+Decision 2026-09-30: `israel_lea_inp_burglary_v2_crime_id_network.json` is **deferred** (not
+inspected in this pass). The offender artifact already contains every crime attribute used by the
+pipeline (date, X, Y, group size) plus the offender links, so the crime network is only worth adding
+if an inspection shows attributes or links that the offender artifact lacks.

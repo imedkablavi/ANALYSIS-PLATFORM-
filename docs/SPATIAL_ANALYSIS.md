@@ -1,25 +1,30 @@
 # Spatial Analysis
 
-Use only when the selected dataset contains sufficiently meaningful location information.
+The provider min-max scaled the coordinates "to prevent precise retrieval of the localization of
+the site". The project uses them **only as relative positions in [0,1]²** and never reverses the
+scaling (`cfg.privacy.denormalize_coordinates = false`).
 
-The primary burglary dataset documentation states that site coordinates are min-max scaled to prevent precise retrieval of the original crime location. This makes the data suitable for relative spatial visualization but not for claiming real-world street-level positions.
+## Entity features
 
-## Candidate features
+radius of gyration, mean/max step distance between consecutive crimes, repeated-site share
+(formulas in docs/FEATURE_ENGINEERING.md). Distances are in normalized units, not metres.
 
-- unique location count,
-- spatial dispersion,
-- transition matrix,
-- location entropy,
-- route novelty,
-- local density.
+## System level (`computeSpatialHotspots`)
+
+- 20 × 20 grid density (`hs.grid`, log-scaled in the app).
+- Cell × year Poisson excess: expected_{c,y} = N_c·N_y/N; p = P(X ≥ observed) =
+  `gammainc(expected, observed)`; hotspot if p < 0.001 / (number of tested cell-years).
+- This highlights cells whose activity in a given year exceeds what their overall share predicts;
+  it is a simple fixed-grid relative of the space–time scan statistic (Kulldorff 1997), not a
+  full scan implementation (no variable windows, no Monte-Carlo inference).
 
 ## Visual outputs
 
-- heatmap,
-- relative coordinate scatter,
-- movement/transition animation,
-- density over time.
+Relative density map with the selected offender's numbered path and the crimes of the current
+playback window (`plotSpatialView`). No basemap is drawn.
 
-## Safety rule
+## Why not more
 
-Never attempt to reverse the anonymization or reconstruct precise real-world locations.
+Route similarity and location entropy were considered. With a median of 1 crime per offender and
+unknown scaling extents, entropy estimates would be unstable; steps and radius already capture
+spread and movement.

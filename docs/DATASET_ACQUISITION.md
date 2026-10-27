@@ -1,5 +1,13 @@
 # Dataset Acquisition Guide
 
+## Automated download (recommended)
+
+```matlab
+run scripts/download_dataset.m   % downloads to data/raw/ and verifies Git blob SHA 3afe9cbb…
+```
+
+Shell alternative and verification: docs/REPRODUCIBILITY.md §2.
+
 ## Recommended first download
 
 Start with the public GitHub repository:
@@ -14,10 +22,10 @@ The documented primary burglary dataset is available as a preprocessed offender 
 
 ## What to download first
 
-For the first prototype, obtain:
+Required: `israel_lea_inp_burglary_offender_id_network.json`.
 
-1. `israel_lea_inp_burglary_offender_id_network.json`
-2. `israel_lea_inp_burglary_v2_crime_id_network.json`
+The crime network `israel_lea_inp_burglary_v2_crime_id_network.json` is deferred (see
+docs/DATASETS.md).
 
 Do not commit the downloaded dataset into the repository until its license/redistribution terms have been checked. Put local copies under `data/raw/` and add them to `.gitignore` if redistribution is not allowed.
 
