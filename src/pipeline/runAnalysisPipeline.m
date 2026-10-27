@@ -297,7 +297,15 @@ if doSave
     if ~isfolder(fileparts(bundleFile))
         mkdir(fileparts(bundleFile));
     end
-    save(bundleFile, "bundle", "-v7.3");
+    % -v7 unless the bundle exceeds the 2 GB limit of that format: -v7.3
+    % (HDF5) stores string arrays, tables and model objects element by
+    % element and took many minutes on MATLAB Online (first real run).
+    info = whos("bundle");
+    if info.bytes < 1.9e9
+        save(bundleFile, "bundle", "-v7");
+    else
+        save(bundleFile, "bundle", "-v7.3");
+    end
     expDir = fullfile(rootDir, cfg.output.experiment_dir);
     if ~isfolder(expDir)
         mkdir(expDir);
