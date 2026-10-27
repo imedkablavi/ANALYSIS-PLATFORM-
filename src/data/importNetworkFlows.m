@@ -155,7 +155,11 @@ v = zeros(height(T), 1);
 for c = col
     x = T.(c);
     if ~isnumeric(x)
-        x = str2double(string(x));   % e.g. hexadecimal ICMP "ports" -> NaN
+        s = strtrim(string(x));
+        x = str2double(s);
+        % Recent MATLAB releases parse "0x0008" as hexadecimal 8. In CTU-13
+        % such values are ICMP type/code fields, not ports: keep them NaN.
+        x(startsWith(s, ["0x", "0X"])) = NaN;
     end
     v = v + double(x);
 end

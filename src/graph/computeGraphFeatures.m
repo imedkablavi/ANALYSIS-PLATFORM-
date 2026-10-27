@@ -87,6 +87,11 @@ else
     cutIdx = [];
 end
 isCut = zeros(n,1);
+if iscell(cutIdx) || isstring(cutIdx)
+    % biconncomp returns node NAMES for graphs with named nodes (observed
+    % in R2026b); convert to indices.
+    cutIdx = findnode(G, cutIdx);
+end
 isCut(cutIdx) = 1;
 
 graphFeatures = table(names, deg, strength, maxTie, clustering, core, ...

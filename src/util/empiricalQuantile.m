@@ -5,6 +5,7 @@ function q = empiricalQuantile(v, p)
 %   analytical core does not depend on a toolbox for a basic statistic.
 
 v = sort(v(~isnan(v)));
+v = v(:);          % column, like h below (a row V broadcast to a matrix)
 q = NaN(size(p));
 m = numel(v);
 if m == 0
