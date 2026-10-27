@@ -27,8 +27,13 @@ if isempty(p) || isempty(p.signature)
 end
 timeCol = cols.time;
 labelCol = cols.label;
-ds = tabularTextDatastore(path, 'TextType', 'string', 'VariableNamingRule', 'preserve', ...
-    'ReadSize', blockRows);
+[~, ~, ext] = fileparts(path);
+if strlength(ext) == 0
+    ext = "";
+end
+% .binetflow / .txt are not standard datastore extensions: declare the file's own.
+ds = tabularTextDatastore(path, 'FileExtensions', {char(ext)}, 'TextType', 'string', ...
+    'VariableNamingRule', 'preserve', 'ReadSize', blockRows);
 ds.SelectedVariableNames = cellstr([timeCol, labelCol]);
 ds.SelectedFormats = repmat({'%q'}, 1, 2);
 rows = {};
