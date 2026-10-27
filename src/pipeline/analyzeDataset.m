@@ -60,7 +60,7 @@ end
 % this inspection instead of reading the file again.
 importOpts = struct('info', info);
 for f = ["mapping","name","time_unit","pseudonymize","keep_id_map", ...
-        "profile","max_rows","labels_file"]
+        "profile","max_rows","first_row","labels_file"]
     if isfield(opts, char(f))
         importOpts.(char(f)) = opts.(char(f));
     end

@@ -120,3 +120,14 @@ bins ("Window (periods)").
 | Host feature definitions | independent Python reference `scripts/reference/network_flow_reference.py`; run on the fixture (expected values of the MATLAB test) and on a real published capture (6,751 flows, 497 hosts: the infected host initiates 99.7% of its flows to 495 destinations, `beacon_cv_min` 0.099) |
 | CIC-IDS2017, UNSW-NB15, LANL layouts | **from the dataset documentation only** (download sites unreachable here). Profiles carry this in `verified`; content checks guard headerless files. First real import must be checked (TASKS_FOR_ADMIN) |
 | Known dataset problems | CIC-IDS2017: label errors, duplicated/miscomputed features, 12-hour timestamps without AM/PM in some files (Lanvin et al. 2022, SciTePress). CTU-13: Background ≠ benign. LANL: red team covers successful authentications only |
+
+## First real runs (MATLAB Online R2026b, 2026-10-27)
+
+- CTU-13 scenario 1 (`CTU-Malware-Capture-Botnet-42`, `capture20110810.binetflow`) with
+  `max_rows = 500000`: the first 500,000 flows span 09:46–10:38 (52 one-minute bins) and contain
+  **0 botnet**, 4,102 normal and 495,898 background flows, so no detection metric can be computed
+  on that slice. Use the whole file or a later slice (`first_row`). The scale guards fired as
+  designed (largest component 185,426 hosts; sum(degree²) 2.88e10).
+- Burglary case study: 17,237 entities, 3,260 eligible (matches the reference audit), 33 flagged
+  per detector; Spearman 0.854 but top-33 Jaccard 0.015. Saving the bundle in `-v7.3` took 748 s
+  on MATLAB Drive (now `-v7`).

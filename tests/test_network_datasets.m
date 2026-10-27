@@ -246,7 +246,9 @@ function testLanlFlowsAndMaxRows(tc)
 ds = importDataset(tc.TestData.lflows, struct('max_rows', 2));
 verifyEqual(tc, ds.meta.profile, "lanl_flows");
 verifyEqual(tc, ds.meta.n_flows, 2);
-verifyTrue(tc, any(contains(ds.meta.import_notes, "first 2 records")));
+verifyTrue(tc, any(contains(ds.meta.import_notes, "records 1 to 2")));
+later = importDataset(tc.TestData.lflows, struct('first_row', 2, 'max_rows', 2));
+verifyEqual(tc, later.flows.bytes', [847 847]);
 verifyEqual(tc, ds.flows.bytes', [5323 847]);
 verifyTrue(tc, isnan(ds.flows.dport(2)));                % "N1" is not a number
 end

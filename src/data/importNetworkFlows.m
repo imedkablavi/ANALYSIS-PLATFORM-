@@ -16,8 +16,10 @@ function ds = importNetworkFlows(path, profileId, meta, opts)
 %   stored in ds.flows (indices only).
 %
 %   OPTS fields (all optional):
-%     max_rows      read only the first MAX_ROWS records (LANL files have
-%                   hundreds of millions of rows; documented in the notes)
+%     max_rows      read only MAX_ROWS records (LANL files have hundreds
+%                   of millions of rows; documented in the notes)
+%     first_row     first record to read (default 1), with max_rows a
+%                   contiguous slice of the capture
 %     labels_file   LANL redteam.txt (time,user@domain,src computer,dst
 %                   computer) for lanl_auth; matching events are malicious,
 %                   all other events of the file benign
@@ -53,10 +55,16 @@ if ~isempty(p.time_formats)
 end
 o = textImportOptions(path, textCols(textCols ~= ""));
 maxRows = cfgGet(opts, "max_rows", Inf);
+firstRow = cfgGet(opts, "first_row", 1);
 notes = strings(0,1);
-if isfinite(maxRows)
-    o.DataLines = [o.DataLines(1), o.DataLines(1) + maxRows - 1];
-    notes(end+1,1) = sprintf("Only the first %d records were read (max_rows).", maxRows);
+if isfinite(maxRows) || firstRow > 1
+    % first_row/max_rows select a contiguous block of records (a time
+    % slice of the capture). The first records of a capture may contain no
+    % attack at all (CTU-13 scenario 1: none in the first 500,000 flows).
+    first = o.DataLines(1) + firstRow - 1;
+    o.DataLines = [first, first + maxRows - 1];
+    notes(end+1,1) = sprintf("Only records %d to %s were read (first_row/max_rows).", ...
+        firstRow, string(firstRow + maxRows - 1));
 end
 T = readtable(path, o);
 h = height(T);
