@@ -2,6 +2,7 @@
 
 ## Unreleased — post-audit hardening
 
+- Progress log (`runLog`): timestamped steps on screen and in `outputs/logs/`; capture pre-scan `scripts/scan_capture.m` (label counts per block) and `first_row` slices for large captures.
 - **First MATLAB execution (2026-10-27, MATLAB Online R2026b with Statistics and Machine Learning Toolbox): 114 / 114 tests passed** after three fixes from the first run (99 / 114): `biconncomp` cut-vertex names, hexadecimal ICMP "ports", row input in `empiricalQuantile`.
 - Scope: computer-network traffic (owner decision 2026-10-20). New `network_flow` format with profiles for CTU-13 (binetflow), CIC-IDS2017 (GeneratedLabelledFlows), UNSW-NB15 (headered and the headerless 49-column files) and LANL (auth + redteam, flows); detection with content checks; `max_rows`; host pseudonymization; flow table without addresses (docs/NETWORK_DATASETS.md).
 - Published labels → host ground truth (`labelNetworkFlows`, `networkGroundTruth`) and detector evaluation (`evaluateGroundTruth`: ROC-AUC, AP vs chance, precision/recall@k, known-only and unknown-as-benign); labels never reach features. App "Ground truth" tab.

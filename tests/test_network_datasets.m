@@ -325,3 +325,13 @@ for j = 1:n
 end
 verifyEqual(tc, f.peak_window_share, best / n, 'AbsTol', 1e-12);
 end
+
+function testScanCaptureCountsLabelsPerBlock(tc)
+S = scanNetworkCapture(tc.TestData.ctu, 5);
+verifyEqual(tc, S.block', [1 2 3]);
+verifyEqual(tc, S.first_row', [1 6 11]);
+verifyEqual(tc, S.last_row', [5 10 13]);
+verifyEqual(tc, S.malicious', [5 2 1]);
+verifyEqual(tc, S.benign', [0 3 1]);
+verifyEqual(tc, S.unknown', [0 0 1]);
+end

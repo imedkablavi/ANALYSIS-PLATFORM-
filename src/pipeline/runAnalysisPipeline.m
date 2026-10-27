@@ -56,6 +56,7 @@ else
         'date_format', cfgGet(cfg, "data.date_format", "yyyy-MM-dd HH:mm:ss")));
 end
 events = data.events;
+runLog("dataset: %d entities, %d event rows", height(data.nodes), height(events));
 timings.import = toc(clk);
 
 clk = tic;
@@ -120,6 +121,7 @@ if height(flows) > 0
 else
     features = mergeFeatureTables(behavior, graphFeatures, seqFeatures);
 end
+runLog("features: %d entities x %d columns", height(features), width(features));
 
 clk = tic;
 stageNo = logStage(stageNo, progressFcn, "temporal analysis");
@@ -352,7 +354,7 @@ end
 function stageNo = logStage(stageNo, progressFcn, name)
 % Console log + optional progress callback (fraction of the 14 stages).
 stageNo = stageNo + 1;
-fprintf("[pipeline] %s ...\n", name);
+runLog("[pipeline %d/14] %s ...", stageNo, name);
 if ~isempty(progressFcn)
     progressFcn(min(stageNo / 14, 1), name);
 end

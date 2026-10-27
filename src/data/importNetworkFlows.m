@@ -66,7 +66,9 @@ if isfinite(maxRows) || firstRow > 1
     notes(end+1,1) = sprintf("Only records %d to %s were read (first_row/max_rows).", ...
         firstRow, string(firstRow + maxRows - 1));
 end
+runLog("reading %s (profile %s) ...", path, p.id);
 T = readtable(path, o);
+runLog("read %d records", height(T));
 h = height(T);
 if h == 0
     error("MOSAIC:EmptyDataset", "No records were read from %s.", path);
@@ -75,6 +77,7 @@ end
 src = textOf(T, cols.src);
 dst = textOf(T, cols.dst);
 [t, tNote] = parseTimeColumn(T.(cols.time), p.time_unit, p.time_formats);
+runLog("times parsed: %s .. %s", string(min(t)), string(max(t)));
 notes(end+1,1) = "Time: " + tNote + ".";
 if p.id == "lanl_auth" || p.id == "lanl_flows"
     notes(end+1,1) = "LANL times are seconds from an undisclosed origin; " + ...
@@ -119,6 +122,8 @@ meta.import_notes = [reshape(string(cfgGet(meta, "import_notes", strings(0,1))),
 if any(self)
     meta.import_notes(end+1,1) = sprintf("%d records have source = destination (one participant).", nnz(self));
 end
+runLog("%s", labelNote);
+runLog("building hosts and events ...");
 [ds, rowEnt, rowEv] = buildCanonicalDataset([src; dst(~self)], [evId; evId(~self)], ...
     [t; t(~self)], [], [], meta, canon);
 

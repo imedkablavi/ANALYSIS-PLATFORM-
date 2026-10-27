@@ -37,6 +37,10 @@ progress = [];
 if isfield(opts, "progress")
     progress = opts.progress;
 end
+logFile = fullfile(rootDir, "outputs", "logs", "analyze_" + ...
+    string(datetime('now'), 'yyyyMMdd_HHmmss') + ".log");
+runLog("open", logFile);
+runLog("analyzeDataset %s", path);
 report(progress, 0.01, "inspecting file");
 
 info = inspectDatasetFile(path);
@@ -109,6 +113,8 @@ entry = struct('dataset_id', id, 'name', ds.meta.name, 'format', ds.meta.format,
     'imported', datetime('now'), 'bundle_file', fullfile(rootDir, cfg.output.bundle_file), ...
     'source_file', path);
 registerDataset(rootDir, entry);
+runLog("done: %s (bundle %s)", id, fullfile(rootDir, cfg.output.bundle_file));
+runLog("close");
 report(progress, 1, "done");
 end
 

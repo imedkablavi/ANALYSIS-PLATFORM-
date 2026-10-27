@@ -131,3 +131,14 @@ bins ("Window (periods)").
 - Burglary case study: 17,237 entities, 3,260 eligible (matches the reference audit), 33 flagged
   per detector; Spearman 0.854 but top-33 Jaccard 0.015. Saving the bundle in `-v7.3` took 748 s
   on MATLAB Drive (now `-v7`).
+
+## Large captures: log, pre-scan, slices
+
+- Every `analyzeDataset` run writes a timestamped log (`runLog`) to the screen and to
+  `outputs/logs/analyze_<date>_<time>.log`, one line per step with the time since the previous
+  line. If a session is cut off, the last line of that file shows the last completed step.
+- `scripts/scan_capture.m` (`scanNetworkCapture`) reads only the time and label columns, block by
+  block, and prints where the labelled attack traffic is. Then analyse a slice that contains it:
+  `analyzeDataset(file, struct('first_row', R, 'max_rows', N))`. Report the slice with the
+  results; the detectors still never see the labels.
+
