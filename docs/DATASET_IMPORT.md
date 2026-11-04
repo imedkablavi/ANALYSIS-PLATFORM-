@@ -1,12 +1,14 @@
 # Importing External Datasets
 
-The platform is not tied to the primary burglary artifact. Any dataset that records **who
-took part in which event and when** can be analysed with the full pipeline (validation,
-behavioural features, graph, temporal/spatial/sequence analysis, anomaly detection,
-explanations, multimedia app).
+The application imports supported network-flow layouts, event-participation
+CSV/TSV/TXT tables, temporal edge lists and the documented secondary NetworkX
+schema. Event records require an entity and timestamp; edge records require
+source, destination and timestamp. Unknown columns can be mapped manually.
+A compatible layout does not guarantee that every feature is meaningful for
+the source domain. Arbitrary JSON and spreadsheet/packet formats are not
+supported by this importer.
 
-> Status: implemented and unit-tested on fixtures; **not yet executed in MATLAB** (same gate
-> as the rest of the code, docs/REPRODUCIBILITY.md §4).
+Verification status for the current source is recorded in [TASKS.md](TASKS.md).
 
 ## How to use
 
@@ -89,3 +91,19 @@ message instead of the map. The other analyses are unaffected.
 - Very large files (≫ 1 M rows) are read into memory in one piece.
 - The interpretation rules of docs/ETHICS_AND_LIMITATIONS.md apply to every dataset: scores are
   deviations within that dataset, never statements about people.
+
+## Custom network-flow tables
+
+Use `format="network_flow"`, `profile="generic_network_flow"` and map `src`,
+`dst`, `time` (aliases `source`/`target` are accepted). Optional fields are
+`duration` in seconds, `bytes`, `packets`, `sport`, `dport`, `proto`. Custom
+labels remain unknown; a column name alone does not establish attack semantics.
+Known profiles keep their unit/label rules. Explicit timestamp units and
+`time_formats` are forwarded through the pipeline. `first_row`/`max_rows` apply
+to flow records only; event/edge imports reject effective slicing rather than
+silently ignoring it. Unsupported binary/compressed formats require conversion.
+
+The app's import dialog permits changing the detected layout and column
+mapping. [Turkish instructions](YENI_VERI_SETI.md). New contracts are covered
+by `test_external_network_import`, `test_dataset_reuse_pipeline` and
+`test_import_dialog_options`; current MATLAB execution remains pending.

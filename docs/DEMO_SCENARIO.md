@@ -2,13 +2,15 @@
 
 ## Main demo: CTU-13 botnet capture (network traffic)
 
-Preparation: download one CTU-13 scenario (`.binetflow`) into `data/external/`, run
-`b = analyzeDataset("data/external/<file>.binetflow")` and `scripts/run_experiments.m` with
-`DATASET = "latest"` once, then `run scripts/launch_app.m` and pick the dataset in the header list.
+Preparation: acquire the full official case study with
+`python3 scripts/data/acquire_ctu13_scenario7.py`, then run
+`scripts/run_network_demo.m` in MATLAB. For retained automated checks and
+experiments, call `verify_delivery("data/external/ctu13-scenario7.binetflow")`.
+Use the artifacts produced by that same run.
 
-1. **Header and KPI tiles** — dataset name and format badge (`network_flow`), hosts, flows, scored
+1. **Header and summary** — dataset name and format badge (`network_flow`), hosts, flows, scored
    hosts, flagged hosts, unusual periods, data quality. Say: "every flow is an event between two
-   pseudonymized hosts; no IP address is shown or stored."
+   pseudonymized hosts; host identifiers are pseudonymized on default import; exports use local pseudonyms."
 2. **Data quality tab** — validation result; import notes (time format, how many flows, label
    counts, Background = unknown).
 3. **Ranking** — "Flagged (either detector)"; eligibility (≥ 3 flows) and the 1 % review budget.
@@ -24,7 +26,7 @@ Preparation: download one CTU-13 scenario (`.binetflow`) into `data/external/`, 
 8. **Replay** — Reset, Play: the communication network grows over the capture; unusual periods
    are labelled (optional audio cue).
 9. **Detectors tab** — baseline vs Isolation Forest agreement.
-10. **Export** — PNGs (no host labels) and the evidence text.
+10. **Export** — figures, measured evidence CSV, supporting-flow CSV and the JSON investigation manifest. Explain the full-run score scope versus the selected replay interval.
 
 Fallback if the app cannot run on the day: the exported PNGs and `experiments_summary.md`
 (E11 table) of the same run.
@@ -47,7 +49,7 @@ Preparation: `run scripts/run_pipeline.m` (once), then `run scripts/launch_app.m
 8. **Replay** — Reset, then Play: ties appear at their first shared crime, the map shows the current
    12-month window, unusual months are labelled (optional audio cue).
 9. **Detectors tab** — baseline vs Isolation Forest agreement; mention E8 stability.
-10. **Timeline** — an unusual month and a change point; mention the seasonality limitation.
+10. **Timeline** — inspect the computed flags and change points if present; explain the configured seasonal baseline.
 11. **Export** — PNGs and evidence text written to `outputs/`.
 
 ## Defense message

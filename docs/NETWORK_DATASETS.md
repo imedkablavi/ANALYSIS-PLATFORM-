@@ -5,10 +5,11 @@ Scope decision (2026-10-20, project owner): "ağ tabanlı" in the assignment tit
 standard labelled network-security datasets directly. The burglary artifact stays supported
 as an earlier case study, but it is not the project's target domain.
 
-> Status: implemented and unit-tested on hand-written fixtures in the published layouts
-> (`tests/test_network_datasets.m`); **not yet executed in MATLAB** (same gate as the rest of
-> the code), and **no real file of these datasets has been analysed yet**: the download
-> sites cannot be reached from the development environment. See "Verification status".
+> Status (2026-10-31): the full official CTU-13 scenario 7 is available locally
+> and audited independently in Python (114,077 flows; 1 malicious and 6 benign
+> eligible hosts). Source and hashes: [REAL_CAPTURE_EVIDENCE.md](REAL_CAPTURE_EVIDENCE.md).
+> The current MATLAB changes and GUI are still pending execution. Historical
+> MATLAB Online runs are recorded below; they do not validate later changes.
 
 ## Supported datasets
 

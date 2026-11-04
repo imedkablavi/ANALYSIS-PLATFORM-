@@ -50,3 +50,12 @@ not real-world accuracy.
 The synthetic grid fits one clean-reference forest per (feature set, repeat) ≈ 10 × 10 = 100 small
 Isolation Forests and scores ≈ 6 groups × 2 shifts × 10 repeats × 10 sets ≈ 1,200 injected matrices with them (formerly ≈ 1,200 fits) 
 runs. Use `QUICK = true` first.
+
+## Presentation defaults (2026-11-01)
+
+Default experiments use the saved observed-data analysis. Controlled E5–E7
+feature perturbations require explicit `include_synthetic=true` or the matching
+research script flag, and their outputs are isolated in `research_synthetic/`.
+The delivery verifier explicitly disables this research option. Skipped research
+is unavailable, not a measured zero. Old research outputs do not become source
+observations by being stored beside a new run.

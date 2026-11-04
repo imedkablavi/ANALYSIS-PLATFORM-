@@ -1,6 +1,16 @@
 # Dataset Strategy
 
-## Primary artifact — burglary offender network
+## Primary demonstration — CTU-13 computer-network traffic
+
+The project domain is computer-network traffic. The full official CTU-13
+scenario 7 has been downloaded and independently audited; exact source and
+hashes are in [REAL_CAPTURE_EVIDENCE.md](REAL_CAPTURE_EVIDENCE.md).
+Use `scripts/run_network_demo.m` to analyse it and open the app in MATLAB;
+use `scripts/verify_delivery.m` for retained tests and experiments.
+Current changes have not been executed in MATLAB locally. Seven eligible
+hosts have known labels, so this remains one limited case study.
+
+## Secondary artifact — burglary offender network
 
 Public repository:
 https://github.com/erichoang/criminal-network-visualization

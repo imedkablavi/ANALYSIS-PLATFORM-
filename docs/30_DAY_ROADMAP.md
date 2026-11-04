@@ -1,33 +1,56 @@
-# Roadmap (recalculated 2026-09-30)
+# Remaining delivery roadmap — recalculated 2026-10-31
 
-The analytical core, experiments and application are implemented but **unexecuted**. The remaining
-plan front-loads execution risk, then evaluation, then presentation.
+The original October 1–30 calendar is historical, not a completed schedule. The
+remaining work below is ordered by dependencies, without inventing a new submission
+date. Exact assignment and deadline confirmation remain external inputs.
 
-## Week 1 (Oct 1–7) — Execution gate
-- Transcribe the assignment wording (T-001) and confirm scope (T-002).
-- `run_tests.m`: fix every runtime failure until all fixture tests pass.
-- Download dataset; `test_real_dataset` must reproduce the reference audit values.
-- `run_pipeline.m` on real data; read the validation report; record timings.
-- **Gate:** tests green, bundle produced, validation report committed as evidence in RESEARCH_LOG.
+Historical evidence: CHANGELOG records 114/114 MATLAB Online tests on 2026-10-27.
+Current fixes/new tests have not run in MATLAB. Official complete CTU-13 scenario 7
+is already local and independently audited; downloading network data is no longer
+the main blocker. See `docs/TASKS.md` for per-task evidence/status.
 
-## Week 2 (Oct 8–14) — Evaluation
-- `run_experiments.m` (QUICK, then full); record E1–E9 numbers in RESEARCH_LOG.
-- T-043 seasonal baseline; compare July flags before/after.
-- Review top-ranked explanations manually for wording and plausibility (no identity claims).
-- Regenerate figures.
-- **Gate:** experiments_summary.md produced and interpreted; limitations updated.
+## Stage 1 — Current execution gate
 
-## Week 3 (Oct 15–21) — Application and demo
-- Launch the app; walk through DEMO_SCENARIO; fix interaction/performance issues.
-- Usability study E10 (5–8 participants).
-- **Gate:** demo runs end-to-end twice without intervention.
+- Obtain an available MATLAB runtime and required toolbox; run `scripts/run_tests.m`.
+- Run `scripts/run_network_demo.m` on pinned scenario 7, inspect canonical counts,
+  validation warnings, label attribution, flow features and graph cost guards.
+- Run current experiments, generate figures and `scripts/verify_delivery.m`; retain
+  errors, source/configuration fingerprints, elapsed time and verification manifest.
+- Gate: current tests pass and current real-data outputs are traceable. Python
+  reference results or historical tests alone do not satisfy this gate.
 
-## Week 4 (Oct 22–30) — Delivery
-- Technical report (structure: introduction, data & validation, methodology, experiments,
-  results, multimedia system, evaluation, ethics & limitations, conclusion).
-- Presentation + recorded demo backup.
-- Clean-clone test on a second machine; README/CHANGELOG; release tag.
+## Stage 2 — Results and interface verification
+
+- Interpret generated E1–E9/ground-truth metrics; separate synthetic injections,
+  observed published labels and unknown-background assumptions.
+- Document that scenario 7 contains only one labelled malicious host: no broad
+  detector-generalization or precision claims from that small positive population.
+- Review actual top-ranked explanations and launch the revised app; verify linked
+  graph, minute timeline, traffic details, chronological replay and privacy.
+- Adapt demo instructions/E10 answer key to a short computer-network capture;
+  spatial/yearly burglary tasks cannot be reused unchanged.
+- Gate: repeatable current demo walkthrough and actual outputs ready for reporting.
+
+## Stage 3 — Human inputs and E10
+
+- Acquire the professor's exact wording, course/author details and submission constraints.
+- Confirm report language and presentation format; decide how to resolve the
+  unsupported “better than tables” comparison claim (comparison study or narrower question).
+- Confirm institutional requirements for volunteer sessions; review Turkish SUS wording.
+- If E10 is retained: pilot then 5–8 actual volunteer sessions, private anonymous
+  responses, scoring and explicit study limitations. Templates are not results.
+- Gate: authentic study evidence or an explicit documented scope exclusion.
+
+## Stage 4 — Delivery artifacts
+
+- Extend the written factual report with detector/experiment results only from generated current artifacts; add confirmed academic metadata.
+- Build final slides and demo backup; synchronize report, figures, README and task board.
+- Reproduce from a clean checkout on the delivery machine, verify manifests, then release.
+- Gate: complete report, presentation, demonstrable application and traceable evidence.
 
 ## Scope rule
-If time runs short, cut in this order: audio cue → pattern tab polish → E8 grid size → synthetic
-repeats. Never cut validation, the eligibility rule, explanations or the ethics statements.
+
+Optional audio and visual polish can be deferred. Additional CIC/UNSW/LANL
+real-capture evaluations and future-time holdout experiments remain extensions;
+implemented profiles are not proof of real-data validation. Preserve validation,
+unknown-label handling, eligibility, explanation/privacy rules and truthful limits.

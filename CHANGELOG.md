@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased — 2026-11-04 professor review
+
+- Consolidate source, observed-data examples, Turkish review notes and an email draft.
+- Correct numeric text export, incomplete bidirectional traffic totals and
+  unavailable/baseline-only detector comparisons; add regression coverage.
+- MATLAB execution and GUI acceptance remain pending; do not merge based only
+  on static checks or an overall green CI run with skipped MATLAB tests.
+
+## Unreleased — 2026-11-02 Windows transfer
+
+- Add an Arabic Windows/MATLAB transfer guide with extraction, tests, analysis,
+  official data download commands and explicit current runtime limits.
+- Package the current worktree (including uncommitted source), both fingerprinted
+  official captures and per-file hashes without the Linux-linked `.git` file.
+- Retain Git state and tracked-file patch in the transfer archive; verify ZIP
+  contents and emit an archive SHA-256. No new MATLAB execution is claimed.
+
+## Unreleased — 2026-10-31 correctness verification
+
+- Correct tied-score AP, subdaily playback, proportion baselines and empty experiments.
+- Stream file hashing, separate import identities and consistently filter malformed flows.
+- Add regression tests and a delivery verification entry point retaining real run evidence.
+- Report figures select a saved dataset and use its time windows and labels.
+- MATLAB runtime validation of these changes is pending; no new metrics are claimed.
+
+
 ## Unreleased — post-audit hardening
 
 - Progress log (`runLog`): timestamped steps on screen and in `outputs/logs/`; capture pre-scan `scripts/scan_capture.m` (label counts per block) and `first_row` slices for large captures.
@@ -95,3 +121,48 @@ development environment).
 - Created repository structure, project context and scope rules, research and dataset planning
   documents, MATLAB-first architecture, 30-day roadmap, task board, definition of done,
   privacy/ethics requirements.
+
+### Evidence-oriented investigation (2026-10-31)
+- Compared Slips, Malcolm, Arkime and Zeek using primary project documentation.
+- Newly generated network bundles retain privacy-safe source flow records for bounded host investigation; labels remain separate from the observations table.
+- Added regression coverage for flow chronology, direction, truncation and peer pseudonyms. MATLAB runtime/UI validation remains pending.
+
+### Reproducible network delivery (2026-10-31)
+- Added an offline streaming capture audit and three passing Python regression tests; CI runs them without a MATLAB license.
+- Added `run_network_demo.m` to verify and analyse the complete pinned official CTU-13 scenario 7 and open that same bundle.
+- Added a component node-edge workload budget for betweenness after checking the real capture's 1.58e9 work proxy; unavailable graph features remain explicit.
+- Hardened verification manifests and retained source/experiment fingerprints. MATLAB execution remains pending.
+
+### Product wording and documentation consistency (2026-10-31)
+- Replaced shared crime/offender feature labels with event/entity/peer terminology and labelled configurable windows accurately.
+- Added .binetflow selection and translated import, status and dialog copy; kept scientific limits and missing-value states explicit.
+- Replaced the old report template with a factual technical report, updated primary CTU-13 dataset card and retained a separate secondary case-study card.
+- Audited task/milestone/admin/roadmap documents against implementation evidence; unexecuted runtime and human deliverables remain distinguished from implemented code.
+
+### Turkish/English investigation interface (2026-10-31)
+- Turkish is the first-session default; Türkçe/English remains visible by name.
+- Reworked header, readable type scale, ranking columns and narrow-window view arrangement.
+- Language changes retain the in-memory investigation and stop playback instead of reloading the source file.
+- Host explanations render measured scores and deviations in the selected language; stored numerical analysis remains unchanged.
+- Localized table headings and added independent Turkish/English user guides and a GUI acceptance procedure.
+- Editorial guidance uses Wikipedia's descriptive writing examples for clear, factual copy; no authorship-detection guarantee is claimed. Current GUI rendering still requires MATLAB acceptance.
+
+### Interface readability — 2026-11-01
+- Added exact locale-aware display counts and readable dataset-type labels; canonical metadata and counts remain unchanged.
+- Added presentation-only localization for known table enums while retaining numeric values and original diagnostics.
+- Deviation plots show the strongest twelve finite measurements with an explicit shown/total title; investigation exports retain full measured evidence.
+- Added regression tests for count formatting, evidence selection and translated table values; current MATLAB execution remains pending.
+
+### Presentation data and code explanation — 2026-11-01
+- Removed the three upstream software-test captures from the local presentation directory and removed their acquisition helper; retained the complete official CTU-13 scenario 7.
+- Public launch selects a saved validated network analysis or an empty interface, without fixture/historical-dataset fallback.
+- Default experiments and delivery verification disable synthetic injection; explicit research outputs remain isolated and labelled.
+- Added the Arabic code guide with per-file explanations and a source inventory. Unit-test fixtures remain isolated from application data.
+- MATLAB execution and interactive acceptance remain required; static checks are not reported as detector results.
+
+### Reusable external dataset imports — 2026-11-01
+- Added generic flow schemas, editable mappings, timestamp-unit/format overrides and validated record ranges while preserving known profile priority.
+- Custom labels remain unknown; tightened CIC auto-detection to avoid interpreting unrelated label columns as attack ground truth.
+- Import pipeline rejects unsupported binary input, closes logging on errors and isolates each dataset's outputs/configuration.
+- Added regressions for multiple independent files, profile compatibility, invalid fields and the import dialog's structural options.
+- Acquired and independently audited official CTU-13 scenario 11 as a second real input; no MATLAB detector result is claimed.
