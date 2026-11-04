@@ -15,12 +15,21 @@ arguments
     textColumns (1,:) string = strings(1,0)
 end
 
+[~, ~, ext] = fileparts(path);
+if ~ismember(lower(string(ext)), ["", ".csv", ".tsv", ".txt", ".binetflow"])
+    error("MOSAIC:UnsupportedFormat", "Only delimited text files are supported by this reader.");
+end
 nSkip = 0;
 fid = fopen(path, 'r');
 if fid < 0
     error("MOSAIC:DataFileNotFound", "Dataset file was not found: %s", path);
 end
 cleaner = onCleanup(@() fclose(fid));
+prefix = fread(fid, 4096, '*uint8');
+if any(prefix == 0 | (prefix < 32 & ~ismember(prefix, uint8([9,10,13]))))
+    error("MOSAIC:UnsupportedFormat", "The file contains binary control bytes; choose delimited flow text.");
+end
+frewind(fid);
 while true
     line = fgetl(fid);
     if ~ischar(line) || ~startsWith(strtrim(string(line)), "#")

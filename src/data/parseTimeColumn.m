@@ -109,7 +109,15 @@ if ~inferred
         try
             cand = datetime(s(todo), 'InputFormat', f);
         catch
-            continue;   % format does not apply to these values
+            % One malformed value must not discard the valid timestamps.
+            values = s(todo);
+            for j = 1:numel(values)
+                try
+                    cand(j) = datetime(values(j), 'InputFormat', f);
+                catch
+                    % Leave only this value unparsed for the next format.
+                end
+            end
         end
         if any(~isnat(cand))
             t(todo) = cand;

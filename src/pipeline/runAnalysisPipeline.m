@@ -282,6 +282,11 @@ bundle.crimes = crimes;
 bundle.relations = relations;
 bundle.pairEvents = pairEvents;
 bundle.graph = G;
+% Keep privacy-safe source observations for host investigation. These are
+% supporting records, not per-flow causal attributions of aggregate scores.
+if height(flows) > 0
+    bundle.flows = flows;
+end
 bundle.registry = registry;
 bundle.sequence = struct('model', seqModel, 'step_threshold', stepThreshold);
 bundle.temporal = temporal;

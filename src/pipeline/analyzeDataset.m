@@ -16,7 +16,8 @@ function bundle = analyzeDataset(path, opts)
 %     root_dir     project root (default: this repository)
 %     progress     @(fraction, message) callback (app progress dialog)
 %     use_iforest  default true when the toolbox is available
-%     time_unit, pseudonymize, keep_id_map   passed to importDataset
+%     format, time_unit, time_formats, date_format, pseudonymize, keep_id_map
+%                  passed to importDataset; explicit schemas override detection
 %     profile, max_rows, labels_file         network traffic (importNetworkFlows,
 %                                            docs/NETWORK_DATASETS.md)
 %     allow_invalid  continue despite error-level validation findings
@@ -29,6 +30,8 @@ arguments
     opts struct = struct()
 end
 
+opts = validateImportOptions(opts);
+assertTextDataset(path);
 rootDir = string(fileparts(fileparts(fileparts(mfilename('fullpath')))));
 if isfield(opts, "root_dir")
     rootDir = string(opts.root_dir);
@@ -38,22 +41,25 @@ if isfield(opts, "progress")
     progress = opts.progress;
 end
 logFile = fullfile(rootDir, "outputs", "logs", "analyze_" + ...
-    string(datetime('now'), 'yyyyMMdd_HHmmss') + ".log");
+    string(datetime('now'), 'yyyyMMdd_HHmmss_SSS') + ".log");
 runLog("open", logFile);
+logCleanup = onCleanup(@() runLog("close")); %#ok<NASGU>
 runLog("analyzeDataset %s", path);
 report(progress, 0.01, "inspecting file");
 
 info = inspectDatasetFile(path);
-if info.format == "unknown"
+hasOverride = isfield(opts, 'format') || isfield(opts, 'mapping');
+if info.format == "unknown" && ~hasOverride
     error("MOSAIC:UnsupportedFormat", "%s", info.message);
 end
-if info.needs_mapping && ~isfield(opts, "mapping")
+if info.needs_mapping && ~isfield(opts, "mapping") && ~isfield(opts, "format")
     error("MOSAIC:MappingMissing", "%s Pass opts.mapping.", info.message);
 end
 
 % LANL authentication events: use redteam.txt from the same folder as the
 % labels file when none is given (recorded in the import notes).
-if info.format == "network_flow" && info.profile == "lanl_auth" && ~isfield(opts, "labels_file")
+if string(cfgGet(opts, "format", info.format)) == "network_flow" && ...
+        string(cfgGet(opts, "profile", cfgGet(info, "profile", ""))) == "lanl_auth" && ~isfield(opts, "labels_file")
     candidate = fullfile(fileparts(path), "redteam.txt");
     if isfile(candidate)
         opts.labels_file = string(candidate);
@@ -63,8 +69,16 @@ end
 % importDataset merges opts.mapping over the detected mapping and reuses
 % this inspection instead of reading the file again.
 importOpts = struct('info', info);
-for f = ["mapping","name","time_unit","pseudonymize","keep_id_map", ...
-        "profile","max_rows","first_row","labels_file"]
+if info.format == "unknown" && ~isfield(opts, 'format') && isfield(opts, 'mapping')
+    m = opts.mapping;
+    if isfield(m, 'source') && isfield(m, 'target')
+        importOpts.format = "edge_csv";
+    elseif isfield(m, 'entity')
+        importOpts.format = "event_csv";
+    end
+end
+for f = ["format","mapping","name","time_unit","time_formats","date_format", ...
+        "pseudonymize","keep_id_map","profile","max_rows","first_row","labels_file"]
     if isfield(opts, char(f))
         importOpts.(char(f)) = opts.(char(f));
     end
@@ -120,6 +134,25 @@ end
 
 function report(progress, fraction, message)
 if ~isempty(progress)
-    progress(fraction, message);
+    try
+        progress(fraction, message);
+    catch
+        % A closed UI/progress dialog must not invalidate scientific output.
+        runLog("Progress display callback unavailable; analysis continues.");
+    end
+end
+end
+
+function assertTextDataset(path)
+% A manual schema can override detection, never turn a binary into a CSV.
+fid = fopen(path, 'rb');
+if fid < 0
+    error("MOSAIC:DataFileNotFound", "Dataset file cannot be opened.");
+end
+cleanup = onCleanup(@() fclose(fid)); %#ok<NASGU>
+prefix = fread(fid, 8192, '*uint8');
+control = prefix < 32 & ~ismember(prefix, uint8([9 10 13]));
+if any(control)
+    error("MOSAIC:UnsupportedFormat", "Binary dataset files are unsupported; provide delimited text or supported JSON.");
 end
 end

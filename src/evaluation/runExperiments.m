@@ -5,6 +5,10 @@ function results = runExperiments(bundle, cfg, outDir, opts)
 %   from runAnalysisPipeline and writes CSV tables plus
 %   experiments_summary.md to OUTDIR. OPTS.quick = true reduces repeats
 %   (smoke test). OPTS.use_iforest = false runs baseline-only experiments.
+%   Synthetic research is OFF by default. Set opts.include_synthetic=true
+%   or cfg.evaluation.include_synthetic=true to run controlled injections.
+%   An explicit opts value overrides cfg. Optional outputs are isolated in
+%   research_synthetic/ and never represent measured real-world accuracy.
 %
 %   E1  data quality                    (validation report)
 %   E2  statistical baseline behaviour  (score distribution, flags)
@@ -32,6 +36,9 @@ arguments
 end
 
 quick = isfield(opts, "quick") && opts.quick;
+includeSynthetic = cfgGet(opts, "include_synthetic", ...
+    cfgGet(cfg, "evaluation.include_synthetic", false));
+validateattributes(includeSynthetic, {'logical'}, {'scalar'}, mfilename, 'include_synthetic');
 useIF = bundle.meta.iforest_used && ~(isfield(opts, "use_iforest") && ~opts.use_iforest);
 if ~isfolder(outDir)
     mkdir(outDir);
@@ -39,6 +46,17 @@ end
 registry = bundle.registry;
 feat = bundle.entities;
 res0 = bundle.anomaly;
+useIF = useIF && nnz(res0.eligible) >= 3 && ~isempty(res0.prep.Z);
+if ~useIF
+    % Work on local copies: disabled/unavailable IF must not leak from a
+    % previously saved two-detector run into distributions or full ablation.
+    res0.iforest = struct('score', NaN(height(feat),1), ...
+        'rank', NaN(height(feat),1), 'flag', false(height(feat),1), ...
+        'threshold', NaN, 'model', []);
+    res0.agreement.spearman = NaN;
+    res0.agreement.topk_jaccard = NaN;
+    feat.iforest_score(:) = NaN;
+end
 seed = cfg.analysis.random_seed;
 nl = cfg.anomaly.iforest.num_learners;
 no = cfg.anomaly.iforest.num_observations_per_learner;
@@ -49,7 +67,7 @@ md(end+1,1) = "Generated: " + string(datetime('now'), 'yyyy-MM-dd HH:mm') + ...
     " | MATLAB " + string(version) + " | seed " + seed + ...
     " | feature version " + cfg.project.feature_version;
 md(end+1,1) = "";
-md(end+1,1) = "All numbers below are produced by `scripts/run_experiments.m`. Synthetic-injection results measure sensitivity to controlled deviations and are NOT real-world detection accuracy.";
+md(end+1,1) = "Numbers below are computed from the saved analysis by `scripts/run_experiments.m`. Unavailable results are not replaced with fabricated measurements.";
 
 % ---------------- E1 ----------------------------------------------------------------
 v = bundle.validation;
@@ -71,10 +89,19 @@ dist = table(q', empiricalQuantile(feat.baseline_score(el), q)', ...
     empiricalQuantile(feat.iforest_score(el), q)', 'VariableNames', ...
     {'quantile','baseline_score','iforest_score'});
 writetable(dist, fullfile(outDir, "E2_E3_score_quantiles.csv"));
-dom = bundle.explanations.summary;
+if useIF
+    dom = bundle.explanations.summary;
+else
+    baselineExplanation = explainAnomalies(res0, feat, cfg);
+    dom = baselineExplanation.summary;
+end
 flaggedAny = dom.baseline_flag | dom.iforest_flag;
 [gd, gname] = findgroups(dom.dominant_group(flaggedAny));
-domTbl = table(gname, accumarray(gd, 1), 'VariableNames', {'dominant_group','flagged_entities'});
+groupCounts = zeros(numel(gname), 1);
+if ~isempty(gd)
+    groupCounts = accumarray(gd, 1, [numel(gname) 1]);
+end
+domTbl = table(gname, groupCounts, 'VariableNames', {'dominant_group','flagged_entities'});
 writetable(domTbl, fullfile(outDir, "E2_E3_dominant_groups.csv"));
 md(end+1,1) = "";
 md(end+1,1) = "## E2/E3 Baseline and Isolation Forest";
@@ -137,6 +164,17 @@ if hasTruth
     md = [md; tableToMarkdown(shown)];
 end
 
+% Optional feature-space perturbations are research only, never the default path.
+agg = table('Size', [0 8], ...
+    'VariableTypes', ["string","double","string","string","double","double","double","double"], ...
+    'VariableNames', {'injected_group','shift_sd','feature_set','detector', ...
+    'roc_auc_mean','roc_auc_sd','ap_mean','precision_at_m_mean'});
+syntheticStatus = "UNAVAILABLE_NOT_REQUESTED";
+if includeSynthetic
+    researchDir = fullfile(outDir, "research_synthetic");
+    if ~isfolder(researchDir)
+        mkdir(researchDir);
+    end
 % ---------------- E5-E7 synthetic injection -----------------------------------------------
 Z = res0.prep.Z;
 colGroups = res0.prep.groups;
@@ -148,7 +186,7 @@ if quick
     reps = 1;
     shifts = shifts(end);
 end
-rows = {};
+rows = cell(0, 8);
 forestCache = cell(numel(sets), reps);
 for tg = targets
     for sh = shifts
@@ -181,18 +219,29 @@ for tg = targets
         end
     end
 end
-syn = cell2table(rows, 'VariableNames', {'injected_group','shift_sd','repeat', ...
-    'feature_set','detector','roc_auc','average_precision','precision_at_m'});
-syn.injected_group = string(syn.injected_group);
-syn.feature_set = string(syn.feature_set);
-syn.detector = string(syn.detector);
-writetable(syn, fullfile(outDir, "synthetic_E5_E7_injection_raw.csv"));
-[gg, a1, a2, a3, a4] = findgroups(syn.injected_group, syn.shift_sd, syn.feature_set, syn.detector);
-agg = table(a1, a2, a3, a4, splitapply(@mean, syn.roc_auc, gg), splitapply(@std, syn.roc_auc, gg), ...
-    splitapply(@mean, syn.average_precision, gg), splitapply(@mean, syn.precision_at_m, gg), ...
+syn = table('Size', [0 8], ...
+    'VariableTypes', ["string","double","double","string","string","double","double","double"], ...
+    'VariableNames', {'injected_group','shift_sd','repeat','feature_set','detector', ...
+    'roc_auc','average_precision','precision_at_m'});
+% Keep explicit types even when no experiment runs.
+if ~isempty(rows)
+    syn = cell2table(rows, 'VariableNames', syn.Properties.VariableNames);
+    syn.injected_group = string(syn.injected_group);
+    syn.feature_set = string(syn.feature_set);
+    syn.detector = string(syn.detector);
+end
+writetable(syn, fullfile(researchDir, "synthetic_E5_E7_injection_raw.csv"));
+agg = table('Size', [0 8], ...
+    'VariableTypes', ["string","double","string","string","double","double","double","double"], ...
     'VariableNames', {'injected_group','shift_sd','feature_set','detector', ...
     'roc_auc_mean','roc_auc_sd','ap_mean','precision_at_m_mean'});
-writetable(agg, fullfile(outDir, "synthetic_E5_E7_injection_summary.csv"));
+if height(syn) > 0
+    [gg, a1, a2, a3, a4] = findgroups(syn.injected_group, syn.shift_sd, syn.feature_set, syn.detector);
+    agg = table(a1, a2, a3, a4, splitapply(@mean, syn.roc_auc, gg), splitapply(@std, syn.roc_auc, gg), ...
+        splitapply(@mean, syn.average_precision, gg), splitapply(@mean, syn.precision_at_m, gg), ...
+        'VariableNames', agg.Properties.VariableNames);
+end
+writetable(agg, fullfile(researchDir, "synthetic_E5_E7_injection_summary.csv"));
 md(end+1,1) = "";
 md(end+1,1) = "## E5-E7 SYNTHETIC injection (sensitivity, not real accuracy)";
 md(end+1,1) = sprintf("Injected fraction %.3g, repeats %d, shifts %s robust SD. Chance AP = injected fraction.", ...
@@ -201,6 +250,15 @@ fullSet = strjoin(cfg.anomaly.feature_groups, "+");
 viewTbl = agg(agg.shift_sd == max(shifts) & ...
     (agg.feature_set == fullSet | agg.feature_set == agg.injected_group), :);
 md = [md; tableToMarkdown(viewTbl)];
+
+    syntheticStatus = "COMPUTED_RESEARCH_ONLY";
+    if isempty(agg)
+        syntheticStatus = "UNAVAILABLE_NO_USABLE_FEATURES";
+    end
+else
+    md(end+1,1) = "";
+    md(end+1,1) = "Optional feature-perturbation research: unavailable (not requested). No research results were computed.";
+end
 
 % ---------------- E8 sensitivity ---------------------------------------------------------------
 sens = {};
@@ -241,13 +299,17 @@ for me = cfg.evaluation.sensitivity.min_events
     a = r.baseline.flag & common;
     b = res0.baseline.flag & common;
     sens(end+1, :) = {"min_events", string(me) + " (eligible " + nnz(r.eligible) + ")", ...
-        nnz(a & b) / max(nnz(a | b), 1), NaN, spearmanRho(r.baseline.score(common), res0.baseline.score(common))}; %#ok<AGROW>
+        flagJaccard(a, b), NaN, spearmanRho(r.baseline.score(common), res0.baseline.score(common))}; %#ok<AGROW>
 end
 for bf = cfg.evaluation.sensitivity.budget
     [fb, thrB] = applyReviewBudget(res0.baseline.score, bf);
     [fi, thrI] = applyReviewBudget(res0.iforest.score, bf);
+    overlap = NaN;
+    if useIF && any(isfinite(res0.baseline.score)) && any(isfinite(res0.iforest.score))
+        overlap = flagJaccard(fb, fi);
+    end
     sens(end+1, :) = {"budget", string(bf) + " (thr base " + sprintf("%.3f", thrB) + ...
-        ", IF " + sprintf("%.3f", thrI) + ")", nnz(fb & fi) / max(nnz(fb | fi), 1), NaN, NaN}; %#ok<AGROW>
+        ", IF " + sprintf("%.3f", thrI) + ")", overlap, NaN, NaN}; %#ok<AGROW>
 end
 sensT = cell2table(sens, 'VariableNames', {'parameter','value','topk_jaccard', ...
     'min_jaccard','spearman'});
@@ -291,7 +353,8 @@ end
 
 writeTextFile(fullfile(outDir, "experiments_summary.md"), joinStrings(md, newline));
 results = struct('ablation', abl, 'synthetic', agg, 'sensitivity', sensT, ...
-    'performance', perf, 'score_quantiles', dist, 'ground_truth', gtRows);
+    'performance', perf, 'score_quantiles', dist, 'ground_truth', gtRows, ...
+    'synthetic_status', syntheticStatus);
 end
 
 function t = droppedText(d)
@@ -324,5 +387,14 @@ for r = 1:height(T)
         end
     end
     lines(end+1, 1) = "| " + strjoin(cells, " | ") + " |"; %#ok<AGROW>
+end
+end
+
+function j = flagJaccard(a, b)
+% No reviewable union means no measured overlap, rather than disagreement.
+denominator = nnz(a | b);
+j = NaN;
+if denominator > 0
+    j = nnz(a & b) / denominator;
 end
 end

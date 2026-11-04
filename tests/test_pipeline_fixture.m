@@ -72,9 +72,9 @@ end
 
 function testExperimentSmokeRun(tc)
 out = fullfile(tc.TestData.dir, "experiments");
-r = runExperiments(tc.TestData.bundle, tc.TestData.cfg, out, struct('quick', true));
+r = runExperiments(tc.TestData.bundle, tc.TestData.cfg, out, struct('quick', true, 'include_synthetic', true));
 verifyTrue(tc, isfile(fullfile(out, "experiments_summary.md")));
-verifyTrue(tc, isfile(fullfile(out, "synthetic_E5_E7_injection_summary.csv")));
+verifyTrue(tc, isfile(fullfile(out, "research_synthetic", "synthetic_E5_E7_injection_summary.csv")));
 verifyGreaterThan(tc, height(r.ablation), 5);
 txt = fileread(fullfile(out, "experiments_summary.md"));
 verifyTrue(tc, contains(txt, "SYNTHETIC"));

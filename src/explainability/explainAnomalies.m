@@ -105,8 +105,8 @@ groupsTbl = table(repelem(chosen, G, 1), repmat(groupsU', K, 1), ...
 dominant = strings(K, 1);
 text = strings(K, 1);
 nElig = numel(eligIdx);
-nouns = struct('entities', string(cfgGet(cfg, "labels.entities", "offenders")), ...
-    'events', string(cfgGet(cfg, "labels.events", "crimes")));
+nouns = struct('entities', string(cfgGet(cfg, "labels.entities", "entities")), ...
+    'events', string(cfgGet(cfg, "labels.events", "events")));
 for i = 1:K
     if hasIF && all(~isnan(occG(i,:)))
         [~, gi] = max(occG(i,:));
@@ -168,7 +168,11 @@ if isempty(lines)
 else
     parts(end+1) = "Main evidence: " + joinStrings(lines, "; ") + ".";
 end
-parts(end+1) = "Dominant feature group: " + dom + ".";
+displayGroup = dom;
+if displayGroup == "cooffending"
+    displayGroup = "peer interactions";
+end
+parts(end+1) = "Dominant feature group: " + displayGroup + ".";
 parts(end+1) = "Interpretation: a statistical deviation from the reference population of " + ...
     nouns.entities + " with >= " + res.settings.min_events + " recorded " + nouns.events + ...
     "; it is not evidence of guilt, intent or dangerousness.";

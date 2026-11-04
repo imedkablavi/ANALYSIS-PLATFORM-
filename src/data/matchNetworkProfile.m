@@ -1,4 +1,4 @@
-function [profile, cols, message] = matchNetworkProfile(path, names, profileId)
+function [profile, cols, message] = matchNetworkProfile(path, names, profileId, mapping)
 %MATCHNETWORKPROFILE Match a delimited file against the known network-traffic layouts.
 %
 %   [PROFILE, COLS, MESSAGE] = MATCHNETWORKPROFILE(PATH, NAMES) tries every
@@ -22,9 +22,14 @@ arguments
     path (1,1) string
     names (1,:) string
     profileId (1,1) string = ""
+    mapping (1,1) struct = struct()
 end
 
 P = networkFlowProfiles();
+if profileId == "generic_network_flow"
+    [profile, cols, message] = genericProfile(P, names, mapping, true);
+    return;
+end
 if profileId ~= ""
     P = P([P.id] == profileId);
     if isempty(P)
@@ -40,6 +45,9 @@ reasons = strings(0,1);
 
 for k = 1:numel(P)
     p = P(k);
+    if p.id == "generic_network_flow"
+        continue;
+    end
     if ~isempty(p.signature)
         if headerless
             continue;
@@ -72,6 +80,14 @@ for k = 1:numel(P)
     return;
 end
 
+if profileId == ""
+    [generic, genericCols, genericMessage] = genericProfile(P, names, mapping, false);
+    if ~isempty(generic)
+        profile = generic; cols = genericCols; message = genericMessage;
+        return;
+    end
+end
+
 if ~isempty(reasons)
     message = message + " (" + joinStrings(reasons, "; ") + ")";
 end
@@ -95,6 +111,13 @@ for k = 1:numel(c)
     if ~isempty(j)
         out(k) = names(j);
     end
+end
+% A multi-column role is a total (for example forward + backward bytes).
+% One missing component makes that total unobserved, rather than equal to
+% the available direction alone. numberOf treats an absent role as NaN.
+if numel(c) > 1 && any(out == "" & c ~= "")
+    out = "";
+    return;
 end
 out = out(out ~= "" | c == "");
 if isempty(out)
@@ -164,4 +187,57 @@ if cond
 else
     v = b;
 end
+end
+
+function [p, cols, message] = genericProfile(P, names, mapping, explicit)
+p = [];
+cols = struct();
+message = "";
+normalized = lower(regexprep(names, "[^A-Za-z0-9]", ""));
+roles = ["src","dst","time","duration","bytes","packets","sport","dport","proto", ...
+    "state","outcome","label","label_detail"];
+aliases = { ["srcip","sourceip","srcaddr","sourceaddress"], ...
+    ["dstip","destinationip","destip","dstaddr","destinationaddress"], ...
+    ["timestamp","starttime","flowstart","flowstarttime","eventtime","time"], ...
+    ["duration","durationseconds","durations","dur"], ...
+    ["bytes","totalbytes","totbytes"], ["packets","totalpackets","totpkts"], ...
+    ["sport","srcport","sourceport"], ["dport","dstport","destinationport"], ...
+    ["proto","protocol"], strings(1,0), strings(1,0), strings(1,0), strings(1,0) };
+if isfield(mapping, "source") && ~isfield(mapping, "src")
+    mapping.src = mapping.source;
+end
+if isfield(mapping, "target") && ~isfield(mapping, "dst")
+    mapping.dst = mapping.target;
+end
+recognized = false(1,3);
+for j = 1:numel(roles)
+    role = roles(j);
+    hits = find(ismember(normalized, aliases{j}));
+    col = "";
+    if j <= 3
+        recognized(j) = ~isempty(hits);
+    end
+    if numel(hits) == 1
+        col = names(hits);
+    end
+    if isfield(mapping, role)
+        requested = string(mapping.(role));
+        if ~isscalar(requested) || ismissing(requested) || (requested ~= "" && ~ismember(requested, names))
+            error("MOSAIC:MappingMissing", "Column for %s is not found or is not scalar.", role);
+        end
+        col = requested;
+    end
+    cols.(role) = col;
+end
+% IP-specific endpoint names are the evidence for auto classification.
+% Missing/ambiguous required fields are exposed for a mapping dialog.
+if ~explicit && ~all(recognized(1:2))
+    return;
+end
+required = [cols.src, cols.dst, cols.time];
+if explicit && (any(required == "") || numel(unique(required)) ~= 3)
+    error("MOSAIC:MappingMissing", "Custom flows require three distinct source, destination and time columns.");
+end
+p = P([P.id] == "generic_network_flow");
+message = "Custom network flows; map source, destination and time. Labels are unknown.";
 end

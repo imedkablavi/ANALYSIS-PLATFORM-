@@ -1,12 +1,17 @@
 % LAUNCH_APP
 % Open the Network Behaviour Explorer.
 %
-% Loads the primary analysis bundle (outputs/model/analysis_bundle.mat,
-% written by scripts/run_pipeline.m) when it exists. Without any bundle the
-% app opens an empty state: use "Open dataset..." in the header to import a
-% JSON/CSV dataset, or pick an earlier import from the Dataset dropdown.
+% Loads the latest saved network-traffic analysis with consistent source
+% metadata from the local dataset catalog. Without a valid saved network run,
+% opens an empty state. Open dataset remains available for explicit imports.
+% This entry point never synthesizes data or opens the historical burglary
+% dataset as an implicit fallback.
 % Design and interaction: docs/MULTIMEDIA_DESIGN.md.
 
 addpath(fullfile(fileparts(mfilename("fullpath"))));
-setupProject();
-app = NetworkBehaviorExplorer();
+rootDir = setupProject();
+[bundle, bundleFile] = presentationBundle(rootDir);
+app = NetworkBehaviorExplorer(struct([]));
+if ~isempty(bundle)
+    app.loadBundle(bundle, bundleFile);
+end

@@ -8,9 +8,15 @@ function plotEvidenceBars(ax, bundle, entityIndex)
 
 th = appTheme();
 ev = entityEvidence(bundle, entityIndex);
+[ev, totalFeatures] = strongestEvidence(ev, 12);
 if height(ev) == 0
-    showAxesMessage(ax, [uiText("Not scored: insufficient history."); ...
-        uiText("This is not a statement that the behaviour is normal.")], th);
+    if ismember('eligible', bundle.entities.Properties.VariableNames) && ...
+            ~bundle.entities.eligible(entityIndex)
+        showAxesMessage(ax, [uiText("Not scored: insufficient history."); ...
+            uiText("This is not a statement that the behaviour is normal.")], th);
+    else
+        showAxesMessage(ax, uiText("No measured deviations are available for this record."), th);
+    end
     return;
 end
 cla(ax, 'reset');   % also hidden-handle objects and manual limits of a previous dataset
@@ -37,7 +43,11 @@ hold(ax, 'off');
 set(ax, 'YTick', 1:height(ev), 'YTickLabel', arrayfun(@(x) char(uiText(x)), ev.label, 'UniformOutput', false), 'YDir', 'reverse');
 ylim(ax, [0.4, height(ev) + 0.6]);
 xlabel(ax, uiText("Robust z (deviation from reference median; dashed = ±%.1f)", thr));
-title(ax, uiText("Deviation profile"));
+if totalFeatures > height(ev)
+    title(ax, uiText("Strongest deviations: %d of %d measured features", height(ev), totalFeatures));
+else
+    title(ax, uiText("Deviation profile"));
+end
 styleAxes(ax, th);
 ax.FontSize = th.font.small;
 ax.YGrid = 'off';

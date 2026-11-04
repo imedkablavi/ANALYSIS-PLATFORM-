@@ -8,7 +8,7 @@ function frame = buildPlaybackFrame(bundle, tEnd, windowLength)
 %     frame.t0, frame.t1
 %     frame.crime_rows     rows of bundle.crimes inside the window
 %     frame.edges          buildGraphSnapshot table for the window
-%     frame.bin            index of the temporal-series bin containing TEND-1 day
+%     frame.bin            last temporal-series bin starting before TEND
 %     frame.bin_is_anomalous  robust-z flag of that bin (crime counts)
 %     frame.new_edges      edges whose first-ever shared crime is in the window
 %   Pure function: the app animates by calling it for successive TEND.
@@ -25,7 +25,9 @@ R = bundle.relations;
 frame.new_edges = R(R.first_time >= frame.t0 & R.first_time < frame.t1, ...
     {'a_index','b_index','weight','first_time'});
 bins = bundle.temporal.series.bin_start;
-frame.bin = find(bins <= tEnd - days(1), 1, 'last');
+% TEND is exclusive. Do not subtract a fixed duration: minute/hour captures
+% may be shorter than that duration, and calendar bins have varying lengths.
+frame.bin = find(bins < tEnd, 1, 'last');
 frame.bin_is_anomalous = false;
 if ~isempty(frame.bin)
     a = bundle.temporal.crime_anomalies;

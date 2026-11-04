@@ -18,7 +18,10 @@ function result = detectTemporalAnomalies(x, window, minBins, zThreshold, mode, 
 %     "poisson"   count series: scale >= sqrt(max(baseline median, 1))
 %     "binomial"  proportion series: scale >= sqrt(p(1-p)/n_t), with p the
 %                 baseline median and n_t = TRIALS(t), the bin's denominator
-%                 (e.g. number of crimes for the co-offending share)
+%                 (e.g. number of crimes for the co-offending share).
+%                 Constant references use this sampling scale instead of
+%                 the generic unit fallback; at p=0/1 a Jeffreys half-count
+%                 correction keeps the scale finite and positive.
 %   A robust scale estimated from a handful of reference values (seasonal
 %   mode uses 3-5 same-month values) can fall far below ordinary sampling
 %   noise; on the real monthly crime series the unfloored seasonal scale was
@@ -65,6 +68,7 @@ if scaleFloor == "binomial" && numel(trials) ~= n
 end
 med = NaN(n,1);
 scale = NaN(n,1);
+constantRef = false(n,1);
 nRef = zeros(n,1);
 refYears = strings(n,1);
 
@@ -76,7 +80,8 @@ if mode == "rolling"
         if nRef(t) < minBins
             continue;
         end
-        [med(t), scale(t)] = robustCenterScale(ref);
+        [med(t), scale(t), scaleMethod] = robustCenterScale(ref);
+        constantRef(t) = scaleMethod == "constant";
         refYears(t) = sprintf("previous %d bins", nRef(t));
     end
 else
@@ -94,7 +99,8 @@ else
         if nRef(t) < seasonalMinSamples
             continue;
         end
-        [med(t), scale(t)] = robustCenterScale(ref);
+        [med(t), scale(t), scaleMethod] = robustCenterScale(ref);
+        constantRef(t) = scaleMethod == "constant";
         refYears(t) = joinStrings(string(yy(refMask)), ",");
     end
 end
@@ -107,8 +113,15 @@ switch scaleFloor
         p = min(max(med, 0), 1);
         ok = trials(:) > 0;
         floorSd(ok) = sqrt(p(ok) .* (1 - p(ok)) ./ trials(ok));
+        % A constant reference has no empirical variance: the scaler's
+        % dimensionless fallback of 1 is unsuitable for proportions.
+        % At p=0/1 use a Jeffreys half-count correction for the noise
+        % scale only, so a changed share has finite, nonzero uncertainty.
+        boundary = ok & constantRef & (p == 0 | p == 1);
+        adjusted = (p(boundary) .* trials(boundary) + 0.5) ./ (trials(boundary) + 1);
+        floorSd(boundary) = sqrt(adjusted .* (1 - adjusted) ./ trials(boundary));
 end
-floorUsed = ~isnan(scale) & ~isnan(floorSd) & scale < floorSd;
+floorUsed = ~isnan(scale) & ~isnan(floorSd) & (scale < floorSd | (scaleFloor == "binomial" & constantRef));
 scale(floorUsed) = floorSd(floorUsed);
 
 z = (x - med) ./ scale;

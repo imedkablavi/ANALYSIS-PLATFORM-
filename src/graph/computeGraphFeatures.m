@@ -24,7 +24,8 @@ function [graphFeatures, notes] = computeGraphFeatures(G, cfg)
 %     cfg.graph.max_clustering_work (default 2e8) clustering is NaN;
 %   - Brandes betweenness costs ~ n*m inside the giant component; above
 %     cfg.graph.max_betweenness_nodes nodes in the largest component
-%     (default 50,000) betweenness is NaN.
+%     (default 50,000), or above max_betweenness_work component node-edge
+%     products (default 2e8), betweenness is NaN.
 %   NaN features are dropped by prepareFeatureMatrix and reported there;
 %   the skip is never silent. The burglary graph (largest component 518,
 %   sum(deg^2) in the thousands) is far below both limits.
@@ -34,6 +35,7 @@ if nargin < 2
 end
 maxWork = cfgGet(cfg, "graph.max_clustering_work", 2e8);
 maxBtwNodes = cfgGet(cfg, "graph.max_betweenness_nodes", 5e4);
+maxBtwWork = cfgGet(cfg, "graph.max_betweenness_work", 2e8);
 notes = strings(0, 1);
 n = numnodes(G);
 if isempty(G.Nodes) || ~ismember('Name', G.Nodes.Properties.VariableNames)
@@ -74,12 +76,18 @@ compSize = accumarray(bins, 1);
 componentSize = compSize(bins);
 
 if numedges(G) > 0
-    if max(compSize) <= maxBtwNodes
+    % Component node-edge products bound the repeated graph traversals.
+    % A node-only limit misses dense components below that limit.
+    [edgeSource, ~] = findedge(G);
+    componentEdges = accumarray(bins(edgeSource), 1, [numel(compSize) 1]);
+    btwWork = sum(compSize .* componentEdges);
+    if max(compSize) <= maxBtwNodes && btwWork <= maxBtwWork
         btw = centrality(G, 'betweenness');
     else
         btw = NaN(n, 1);
         notes(end+1, 1) = sprintf("betweenness not computed: largest component has %d nodes " + ...
-            "(> graph.max_betweenness_nodes = %d; Brandes cost ~ n*m).", max(compSize), maxBtwNodes);
+            "(node limit %d); sum(component nodes * edges) = %.3g (work limit %.3g).", ...
+            max(compSize), maxBtwNodes, btwWork, maxBtwWork);
     end
     [~, cutIdx] = biconncomp(G);
 else

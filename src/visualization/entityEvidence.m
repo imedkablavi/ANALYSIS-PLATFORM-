@@ -29,4 +29,9 @@ end
 ev = table(prep.names', prep.labels', prep.groups', values', ref', ...
     prep.Z(row, :)', occ', 'VariableNames', {'feature','label','group', ...
     'value','reference_median','robust_z','occlusion_delta'});
+% Saved bundles can predate the domain-neutral vocabulary. Resolve labels
+% from current feature keys without changing stored measurements or scores.
+registry = featureRegistry();
+[known, loc] = ismember(string(ev.feature), registry.name);
+ev.label(known) = registry.label(loc(known));
 end

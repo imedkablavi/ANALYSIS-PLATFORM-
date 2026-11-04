@@ -65,6 +65,7 @@ cfg.anomaly.feature_groups = ["activity","temporal","spatial", ...
     "cooffending","graph","sequence","network"];   % "network": traffic datasets only
 cfg.network.beacon_min_flows = 4;      % flows per host pair for beacon_cv_min
 cfg.graph.max_clustering_work = 2e8;   % sum(degree^2) above which clustering is skipped
+cfg.graph.max_betweenness_work = 2e8;   % sum(component nodes * edges), cost proxy
 cfg.graph.max_betweenness_nodes = 5e4; % largest component above which betweenness is skipped
 cfg.anomaly.method = "isolation_forest";
 cfg.anomaly.iforest.num_learners = 200;
@@ -74,6 +75,8 @@ cfg.anomaly.feature_z_threshold = 3.5;      % per-feature evidence flag
 cfg.anomaly.explain_top_k = 100;            % entities receiving occlusion attribution
 
 % --- Evaluation (docs/EVALUATION.md) -------------------------------------
+% Explicit research opt-in only; normal reports use observed data.
+cfg.evaluation.include_synthetic = false;
 cfg.evaluation.synthetic_fraction = 0.01;
 cfg.evaluation.synthetic_shift = [3 5];     % robust-SD shifts for injection
 cfg.evaluation.synthetic_repeats = 10;

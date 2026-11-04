@@ -46,6 +46,10 @@ classdef NetworkBehaviorExplorer < handle
         BundleFile = ""
         SearchText = ""
         MainGrid
+        MainAreaGrid
+        NetPanel
+        DetailsPanel
+        TimelinePanel
         % Header
         DatasetLabel
         FormatBadge
@@ -71,6 +75,7 @@ classdef NetworkBehaviorExplorer < handle
         DetectorAxes
         TruthTable
         QualityTable
+        ProvenanceTable
         % Replay bar
         ResetButton
         StepButton
@@ -121,8 +126,7 @@ classdef NetworkBehaviorExplorer < handle
             else
                 file = string(source);
                 if ~isfile(file)
-                    problem = "Analysis bundle not found: " + file + ...
-                        ". Run scripts/run_pipeline.m or use Open dataset.";
+                    problem = uiText("The saved analysis could not be found. Use Open dataset to select a supported file.");
                     file = "";
                 end
             end
@@ -130,7 +134,7 @@ classdef NetworkBehaviorExplorer < handle
                 try
                     bundle = app.readBundleFile(file);
                 catch ME
-                    problem = "Could not load " + file + ": " + ME.message;
+                    problem = uiText("Could not load the saved analysis: %s", ME.message);
                     bundle = [];
                     file = "";
                 end
@@ -143,7 +147,7 @@ classdef NetworkBehaviorExplorer < handle
             end
             app.refreshDatasetList();
             if strlength(problem) > 0
-                uialert(app.Figure, problem, 'Bundle not loaded');
+                uialert(app.Figure, problem, char(uiText("Analysis not loaded")));
             end
         end
 
@@ -184,7 +188,7 @@ classdef NetworkBehaviorExplorer < handle
             try
                 ctx = getEntityContext(b, entityIndex);
             catch ME
-                app.setStatus("Could not read this entity: " + ME.message);
+                app.setStatus(uiText("Could not read this entity: %s", ME.message));
                 return;
             end
             app.Selected = entityIndex;
@@ -197,22 +201,29 @@ classdef NetworkBehaviorExplorer < handle
             app.safePlot(app.DetectorAxes, @() plotScoreComparison(app.DetectorAxes, b, entityIndex));
 
             p = ctx.profile;
-            header = sprintf("%s | status: %s | %s: %d | partners: %d | component size: %d", ...
-                string(p.entity_id), ctx.status, ds.event_plural, app.profileValue(p, 'event_count'), ...
-                app.profileValue(p, 'degree'), app.profileValue(p, 'component_size'));
-            app.ExplainText.Value = [header; ""; ctx.explanation; ""; ...
-                "Sequence tokens (partner state + move): " + app.tokenPreview(ctx.events.token)];
+            app.ExplainText.Value = renderEntitySummary(b, entityIndex);
 
-            app.EventTable.Data = app.eventDisplayTable(ctx.events, ds);
+            if isfield(b, 'flows') && ~isempty(b.flows)
+                [observations, total] = hostFlowEvidence(b, entityIndex, 2000);
+                app.EventTable.Data = observations;
+                app.ExplainText.Value = [string(app.ExplainText.Value); ""; ...
+                    uiText("Supporting observations: %d of %d flows shown. Full-run scores; observations do not attribute a score to a particular flow.", ...
+                        height(observations), total)];
+            else
+                app.EventTable.Data = app.eventDisplayTable(ctx.events, ds);
+            end
+            app.translateTableHeaders(app.EventTable);
             % Busy hosts have >100,000 partners: show the 500 strongest
             % (ctx.partners is sorted by shared events) so the table stays fast.
             pt = ctx.partners(1:min(500, height(ctx.partners)), :);
             app.PartnerTable.Data = table(pt.partner_id, pt.shared_crimes, ...
-                string(pt.first_time, 'yyyy-MM-dd'), string(pt.last_time, 'yyyy-MM-dd'), ...
+                string(pt.first_time, ds.time_format), string(pt.last_time, ds.time_format), ...
                 round(pt.partner_iforest_score, 3), 'VariableNames', ...
                 {'partner', 'shared_events', 'first', 'last', 'partner_score'});
             app.PartnerTable.UserData = pt.partner_index;
-            sel = uiText("Selected: %s (%s)", string(p.entity_id), ctx.status);
+            app.translateTableHeaders(app.PartnerTable);
+            app.PartnerTable.ColumnWidth = {100, 100, 150, 150, 110};
+            sel = uiText("Selected: %s (%s)", string(p.entity_id), uiText(ctx.status));
             if ismember('truth', b.entities.Properties.VariableNames)
                 % Shown after scoring, for evaluation; the detectors never use it.
                 sel = sel + uiText("  ·  published label: %s", string(b.entities.truth(entityIndex)));
@@ -279,15 +290,18 @@ classdef NetworkBehaviorExplorer < handle
             %           | timeline + replay controls (full width)
             %   status line
             th = app.Theme;
-            app.Figure = uifigure('Name', 'Network Behaviour Explorer', ...
-                'Position', [40 40 1560 940], 'Color', th.color.surface);
+            screen = get(groot, 'ScreenSize');
+            app.Figure = uifigure('Name', char(uiText("Network Behaviour Explorer")), ...
+                'Position', [40 40 min(1560, screen(3)-80) min(940, screen(4)-100)], ...
+                'Color', th.color.surface);
             app.Figure.CloseRequestFcn = @(~, ~) delete(app);
+            app.Figure.Tag = 'NetworkBehaviorExplorer';
             app.MainGrid = uigridlayout(app.Figure, [4 2]);
             g = app.MainGrid;
-            g.RowHeight = {40, 22, '1x', 20};
-            g.ColumnWidth = {360, '1x'};
-            g.Padding = [14 8 14 6];
-            g.RowSpacing = 6;
+            g.RowHeight = {82, 26, '1x', 44};
+            g.ColumnWidth = {430, '1x'};
+            g.Padding = [16 12 16 8];
+            g.RowSpacing = 8;
             g.ColumnSpacing = 14;
             app.setIf(g, 'BackgroundColor', th.color.surface);
 
@@ -296,34 +310,78 @@ classdef NetworkBehaviorExplorer < handle
             app.buildSidebar();
             app.buildMainArea();
             app.buildStatusBar();
+            app.Figure.SizeChangedFcn = @(~, ~) app.adjustLayout();
+            app.adjustLayout();
+        end
+
+        function adjustLayout(app)
+            % Stack the views in smaller windows. Fixed minimum heights
+            % allow scrolling instead of shrinking plots below readable size.
+            if isempty(app.MainAreaGrid) || ~isvalid(app.MainAreaGrid)
+                return;
+            end
+            if app.Figure.Position(3) < 1280
+                app.MainGrid.ColumnWidth = {360, '1x'};
+                app.RankTable.ColumnWidth = {88, 58, 62, 70, 60};
+                app.MainAreaGrid.RowHeight = {240, 280, 260};
+                app.NetPanel.Layout.Row = 1;
+                app.NetPanel.Layout.Column = [1 2];
+                app.DetailsPanel.Layout.Row = 2;
+                app.DetailsPanel.Layout.Column = [1 2];
+                app.TimelinePanel.Layout.Row = 3;
+            else
+                app.MainGrid.ColumnWidth = {430, '1x'};
+                app.RankTable.ColumnWidth = {108, 68, 74, 88, 68};
+                % Move the third-row panel before reducing the grid rows.
+                app.NetPanel.Layout.Row = 1;
+                app.NetPanel.Layout.Column = 1;
+                app.DetailsPanel.Layout.Row = 1;
+                app.DetailsPanel.Layout.Column = 2;
+                app.TimelinePanel.Layout.Row = 2;
+                app.MainAreaGrid.RowHeight = {'1.2x', '1x'};
+            end
         end
 
         function buildHeader(app)
             th = app.Theme;
-            h = uigridlayout(app.MainGrid, [1 8]);
+            h = uigridlayout(app.MainGrid, [2 1]);
             h.Layout.Row = 1;
             h.Layout.Column = [1 2];
-            h.ColumnWidth = {'fit', 'fit', 'fit', '1x', 70, 300, 130, 90};
-            h.RowHeight = {'1x'};
+            h.ColumnWidth = {'1x'};
+            h.RowHeight = {32, 34};
             h.Padding = [0 0 0 0];
-            h.ColumnSpacing = 12;
+            h.RowSpacing = 8;
             app.setIf(h, 'BackgroundColor', th.color.surface);
-            app.label(h, uiText("Network Behaviour Explorer"), th.font.header, th.color.text, 'bold');
-            app.DatasetLabel = app.label(h, uiText("No dataset loaded"), th.font.base, th.color.text, 'normal');
-            app.FormatBadge = app.label(h, "", th.font.small, th.color.textSecondary, 'normal');
-            app.label(h, "", th.font.small, th.color.text, 'normal');
-            uidropdown(h, 'Items', {'TR', 'EN'}, 'ItemsData', {'tr', 'en'}, ...
-                'Value', char(uiText("--lang")), 'FontName', th.font.family, ...
-                'FontSize', th.font.base, 'Tooltip', char(uiText("Language")), ...
-                'ValueChangedFcn', @(~, evt) app.switchLanguage(evt.Value));
-            app.DatasetDrop = uidropdown(h, 'Items', {'(no datasets)'}, 'ItemsData', {''}, ...
+            identity = uigridlayout(h, [1 3]);
+            identity.Layout.Row = 1;
+            identity.ColumnWidth = {'fit', '1x', 'fit'};
+            identity.Padding = [0 0 0 0];
+            identity.ColumnSpacing = 20;
+            app.setIf(identity, 'BackgroundColor', th.color.surface);
+            app.label(identity, uiText("Network Behaviour Explorer"), th.font.header, th.color.text, 'bold');
+            app.DatasetLabel = app.label(identity, uiText("No dataset loaded"), th.font.base, th.color.textSecondary, 'normal');
+            app.FormatBadge = app.label(identity, "", th.font.small, th.color.textSecondary, 'normal');
+
+            toolbar = uigridlayout(h, [1 5]);
+            toolbar.Layout.Row = 2;
+            toolbar.ColumnWidth = {'1x', 150, 110, 16, 130};
+            toolbar.Padding = [0 0 0 0];
+            toolbar.ColumnSpacing = 10;
+            app.setIf(toolbar, 'BackgroundColor', th.color.surface);
+            app.DatasetDrop = uidropdown(toolbar, 'Items', {char(uiText("No datasets available"))}, 'ItemsData', {''}, ...
                 'FontName', th.font.family, 'FontSize', th.font.base, ...
                 'Tooltip', char(uiText("Analysed datasets")), ...
                 'ValueChangedFcn', @(src, evt) app.onDatasetChosen(src, evt));
-            app.OpenButton = app.plainButton(h, char(uiText("Open dataset…")), ...
+            app.OpenButton = app.plainButton(toolbar, char(uiText("Open dataset…")), ...
                 char(uiText("Import a dataset file and analyse it")), @(~, ~) app.openDataset());
-            app.ExportButton = app.plainButton(h, char(uiText("Export")), ...
-                char(uiText("Save PNGs of the views and the evidence text to outputs/")), @(~, ~) app.exportViews());
+            app.ExportButton = app.plainButton(toolbar, char(uiText("Export")), ...
+                char(uiText("Export views and investigation evidence (JSON/CSV)")), @(~, ~) app.exportViews());
+            app.label(toolbar, "", th.font.small, th.color.text, 'normal');
+            uidropdown(toolbar, 'Items', {'Türkçe', 'English'}, 'ItemsData', {'tr', 'en'}, ...
+                'Tag', 'LanguageSelector', ...
+                'Value', char(uiText("--lang")), 'FontName', th.font.family, ...
+                'FontSize', th.font.base, 'Tooltip', char(uiText("Language")), ...
+                'ValueChangedFcn', @(~, evt) app.switchLanguage(evt.Value));
         end
 
         function buildSummary(app)
@@ -338,29 +396,42 @@ classdef NetworkBehaviorExplorer < handle
             s = uigridlayout(app.MainGrid, [5 1]);
             s.Layout.Row = 3;
             s.Layout.Column = 1;
-            s.RowHeight = {20, 26, 26, 16, '1x'};
+            s.RowHeight = {24, 32, 32, 44, '1x'};
             s.Padding = [0 0 0 0];
             s.RowSpacing = 6;
             app.setIf(s, 'BackgroundColor', th.color.surface);
             app.label(s, uiText("Ranking"), th.font.title, th.color.text, 'bold');
             app.SearchField = uieditfield(s, 'text', 'FontName', th.font.family, ...
+                'Tag', 'EntitySearch', ...
                 'FontSize', th.font.base, ...
                 'ValueChangingFcn', @(~, evt) app.onSearch(evt.Value), ...
                 'ValueChangedFcn', @(src, ~) app.onSearch(src.Value));
             app.setIf(app.SearchField, 'Placeholder', char(uiText("Search ID")));
             app.FilterDrop = uidropdown(s, 'Items', cellfun(@(x) char(uiText(x)), app.FilterItems, ...
                 'UniformOutput', false), 'ItemsData', app.FilterItems, ...
+                'Tag', 'RankingFilter', ...
                 'FontName', th.font.family, 'FontSize', th.font.base, ...
                 'ValueChangedFcn', @(~, ~) app.fillRanking());
             app.RankCountLabel = app.label(s, "", th.font.small, th.color.textSecondary, 'normal');
+            app.setIf(app.RankCountLabel, 'WordWrap', 'on');
             app.RankTable = uitable(s, 'CellSelectionCallback', @(~, evt) app.onRankSelect(evt));
             app.styleTable(app.RankTable);
             app.RankTable.ColumnName = cellfun(@(x) char(uiText(x)), {'ID', 'IF rank', ...
-                'IF score', 'Base rank', 'Base score', 'Events', 'Main group'}, 'UniformOutput', false);
+                'IF score', 'Base score', 'Events'}, 'UniformOutput', false);
+            app.RankTable.ColumnWidth = {108, 68, 74, 88, 68};
         end
 
         function switchLanguage(app, lang)
-            % Rebuild the window in the chosen language with the same data.
+            % Rebuild labels using the current in-memory run. Preserve the
+            % investigation state; replay remains stopped after a language change.
+            app.stopTimer();
+            app.PlayButton.Text = char(uiText("Play"));
+            selected = app.Selected;
+            cursor = app.CursorIndex;
+            windowLength = app.WindowSpinner.Value;
+            filter = app.FilterDrop.Value;
+            search = app.SearchText;
+            audio = app.AudioBox.Value;
             uiText("--lang", lang);
             try
                 setpref('NetworkBehaviourExplorer', 'lang', char(lang));
@@ -370,14 +441,28 @@ classdef NetworkBehaviorExplorer < handle
             bundle = app.Bundle;
             file = app.BundleFile;
             pos = app.Figure.Position;
-            if strlength(file) > 0
-                next = NetworkBehaviorExplorer(file);
-            elseif ~isempty(bundle)
+            if ~isempty(bundle)
                 next = NetworkBehaviorExplorer(bundle);
             else
-                next = NetworkBehaviorExplorer();
+                % Explicit empty state avoids loading a newly created default run.
+                next = NetworkBehaviorExplorer(struct([]));
             end
             next.Figure.Position = pos;
+            next.BundleFile = file;
+            next.refreshDatasetList();
+            next.WindowSpinner.Value = windowLength;
+            next.FilterDrop.Value = filter;
+            next.SearchText = search;
+            next.SearchField.Value = char(search);
+            next.fillRanking();
+            if ~isempty(bundle)
+                next.AudioBox.Value = false;
+                next.setCursor(cursor);
+                if ~isempty(selected)
+                    next.selectEntity(selected);
+                end
+            end
+            next.AudioBox.Value = audio;
             delete(app);
         end
 
@@ -386,13 +471,14 @@ classdef NetworkBehaviorExplorer < handle
             n = numel(tokens);
             s = joinStrings(tokens(1:min(n, 40)), " ");
             if n > 40
-                s = s + sprintf(" ... (%d more)", n - 40);
+                s = s + uiText(" ... (%d more)", n - 40);
             end
         end
 
         function buildMainArea(app)
             th = app.Theme;
             m = uigridlayout(app.MainGrid, [2 2]);
+            app.MainAreaGrid = m;
             m.Layout.Row = 3;
             m.Layout.Column = 2;
             m.RowHeight = {'1.2x', '1x'};
@@ -401,10 +487,13 @@ classdef NetworkBehaviorExplorer < handle
             m.RowSpacing = 10;
             m.ColumnSpacing = 14;
             app.setIf(m, 'BackgroundColor', th.color.surface);
+            app.setIf(m, 'Scrollable', 'on');
 
             app.NetAxes = app.axesPanel(m, uiText("Network"), 1, 1);
+            app.NetPanel = app.NetAxes.Parent.Parent;
 
             dp = app.card(m, uiText("Details"));
+            app.DetailsPanel = dp;
             dp.Layout.Row = 1;
             dp.Layout.Column = 2;
             dg = uigridlayout(dp, [1 1]);
@@ -436,13 +525,19 @@ classdef NetworkBehaviorExplorer < handle
             g7 = app.tabGrid(uiText("Data quality"));
             app.QualityTable = uitable(g7);
             app.styleTable(app.QualityTable);
+            g10 = app.tabGrid(uiText("Provenance"));
+            app.ProvenanceTable = uitable(g10);
+            app.styleTable(app.ProvenanceTable);
+            app.ProvenanceTable.ColumnName = {char(uiText("Field")), char(uiText("Value"))};
+            app.ProvenanceTable.ColumnWidth = {210, 350};
 
             % Timeline with its replay controls directly underneath.
             tp = app.card(m, uiText("Timeline"));
+            app.TimelinePanel = tp;
             tp.Layout.Row = 2;
             tp.Layout.Column = [1 2];
             tg = uigridlayout(tp, [2 1]);
-            tg.RowHeight = {'1x', 30};
+            tg.RowHeight = {'1x', 60};
             tg.Padding = [0 0 0 0];
             tg.RowSpacing = 4;
             app.setIf(tg, 'BackgroundColor', th.color.surface);
@@ -452,9 +547,9 @@ classdef NetworkBehaviorExplorer < handle
 
         function buildReplayBar(app, parent)
             th = app.Theme;
-            r = uigridlayout(parent, [1 8]);
-            r.ColumnWidth = {64, 64, 64, '1x', 'fit', 64, 'fit', 420};
-            r.RowHeight = {'1x'};
+            r = uigridlayout(parent, [2 7]);
+            r.ColumnWidth = {76, 70, 76, '1x', 'fit', 64, 'fit'};
+            r.RowHeight = {30, 20};
             r.Padding = [0 0 0 0];
             r.ColumnSpacing = 10;
             app.setIf(r, 'BackgroundColor', th.color.surface);
@@ -465,32 +560,39 @@ classdef NetworkBehaviorExplorer < handle
             app.PlayButton = app.plainButton(r, char(uiText("Play")), char(uiText("Play / pause the replay")), ...
                 @(~, ~) app.togglePlay());
             app.TimeSlider = uislider(r, 'Limits', [1 2], 'Value', 1, ...
+                'Tag', 'ReplayCursor', ...
                 'MajorTicks', [], 'MinorTicks', [], ...
                 'ValueChangedFcn', @(s, ~) app.setCursor(s.Value));
             app.label(r, uiText("Window"), th.font.base, th.color.textSecondary, 'normal');
             app.WindowSpinner = uispinner(r, 'Limits', [1 120], 'Value', 12, ...
+                'Tag', 'ReplayWindow', ...
                 'Tooltip', char(uiText("Window length in timeline bins (months, weeks, days, hours or minutes)")), ...
                 'FontName', th.font.family, 'FontSize', th.font.base, ...
                 'ValueChangedFcn', @(~, ~) app.setCursor(app.CursorIndex));
             app.AudioBox = uicheckbox(r, 'Text', char(uiText("Sound")), 'Value', false, ...
+                'Tag', 'ReplayAudio', ...
                 'FontName', th.font.family, 'FontSize', th.font.base, ...
                 'FontColor', th.color.textSecondary);
             app.TimeLabel = app.label(r, "", th.font.small, th.color.textSecondary, 'normal');
+            app.TimeLabel.Layout.Row = 2;
+            app.TimeLabel.Layout.Column = [1 7];
         end
 
         function buildStatusBar(app)
             th = app.Theme;
-            s = uigridlayout(app.MainGrid, [1 3]);
+            s = uigridlayout(app.MainGrid, [2 2]);
             s.Layout.Row = 4;
             s.Layout.Column = [1 2];
-            s.ColumnWidth = {'1x', '1x', 'fit'};
-            s.RowHeight = {'1x'};
+            s.ColumnWidth = {'1x', '1x'};
+            s.RowHeight = {20, 18};
             s.Padding = [0 0 0 0];
             app.setIf(s, 'BackgroundColor', th.color.surface);
             app.StatusLabel = app.label(s, uiText("Ready."), th.font.small, th.color.textSecondary, 'normal');
             app.SelectionLabel = app.label(s, uiText("No selection"), th.font.small, th.color.text, 'normal');
+            app.SelectionLabel.Tag = 'SelectedEntity';
             d = app.label(s, uiText(app.Disclaimer), th.font.small, th.color.textSecondary, 'normal');
-            d.HorizontalAlignment = 'right';
+            d.Layout.Row = 2;
+            d.Layout.Column = [1 2];
         end
 
         %% -------------------------------------------------- layout helpers
@@ -551,6 +653,34 @@ classdef NetworkBehaviorExplorer < handle
             t.RowName = {};
         end
 
+        function translateTableHeaders(~, t)
+            % Display labels follow the active language; machine-readable
+            % table variable names and export schemas stay unchanged.
+            if ~istable(t.Data)
+                return;
+            end
+            names = string(t.Data.Properties.VariableNames);
+            t.Data = localizeTableDisplay(t.Data);
+            labels = names;
+            widths = repmat({110}, 1, numel(names));
+            for k = 1:numel(names)
+                labels(k) = uiText(names(k));
+                if ismember(names(k), ["time", "first", "last"])
+                    widths{k} = 165;
+                elseif ismember(names(k), ["protocol", "direction", "peer", "partner"])
+                    widths{k} = 110;
+                elseif ismember(names(k), ["message", "note"])
+                    widths{k} = 440;
+                elseif ismember(names(k), ["ngram", "token"])
+                    widths{k} = 220;
+                elseif ismember(names(k), ["duration_seconds", "malicious_not_scored"])
+                    widths{k} = 150;
+                end
+            end
+            t.ColumnName = cellstr(labels);
+            t.ColumnWidth = widths;
+        end
+
         function setIf(~, h, name, value)
             % Properties added in later releases (e.g. BorderColor,
             % Placeholder) are styled when present and skipped otherwise.
@@ -565,7 +695,8 @@ classdef NetworkBehaviorExplorer < handle
             th = app.Theme;
             ds = bundleDatasetInfo(b);
             app.DatasetLabel.Text = char(ds.name);
-            app.FormatBadge.Text = char(ds.format);
+            app.ProvenanceTable.Data = bundleProvenance(b);
+            app.FormatBadge.Text = char(datasetFormatLabel(ds.format));
             app.setControlsEnabled(true);
 
             % One plain summary line instead of dashboard tiles.
@@ -573,10 +704,21 @@ classdef NetworkBehaviorExplorer < handle
             parts = strings(1, 0);
             for i = 1:numel(kpi.tiles) - 1
                 t = kpi.tiles(i);
-                parts(end+1) = t.value_text + " " + uiText(lower(t.label)); %#ok<AGROW>
+                parts(end+1) = formatDisplayCount(t.value) + " " + uiText(lower(t.label)); %#ok<AGROW>
             end
             q = kpi.tiles(end);
-            parts(end+1) = uiText("data quality: %s", uiText(lower(q.value_text)));
+            if kpi.quality_status == "critical"
+                quality = uiText("invalid");
+            elseif isnan(kpi.warnings)
+                quality = uiText("not validated");
+            elseif kpi.warnings == 0
+                quality = uiText("valid");
+            elseif kpi.warnings == 1
+                quality = uiText("%d warning", kpi.warnings);
+            else
+                quality = uiText("%d warnings", kpi.warnings);
+            end
+            parts(end+1) = uiText("data quality: %s", quality);
             app.SummaryLabel.Text = char(joinStrings(parts, "   ·   "));
             if q.status == "critical"
                 app.SummaryLabel.FontColor = th.status.critical;
@@ -614,6 +756,8 @@ classdef NetworkBehaviorExplorer < handle
             else
                 app.QualityTable.Data = table();
             end
+            app.translateTableHeaders(app.PatternTable);
+            app.translateTableHeaders(app.QualityTable);
             app.safePlot(app.DetectorAxes, @() plotScoreComparison(app.DetectorAxes, b));
             if ds.has_labels
                 % Published labels: evaluation of the unsupervised detectors only.
@@ -629,6 +773,7 @@ classdef NetworkBehaviorExplorer < handle
                     "results are deviations only, not verified detections."), ...
                     'VariableNames', {'note'});
             end
+            app.translateTableHeaders(app.TruthTable);
             app.fillRanking();
             app.safePlot(app.TimeAxes, @() plotActivityTimeline(app.TimeAxes, b, [], app.cursorTime()));
             app.safePlot(app.MapAxes, @() plotSpatialView(app.MapAxes, b, []));
@@ -639,7 +784,7 @@ classdef NetworkBehaviorExplorer < handle
             app.PartnerTable.Data = table();
             app.PartnerTable.UserData = [];
             app.SelectionLabel.Text = uiText("No selection");
-            app.setStatus(uiText("Loaded %s", ds.name + " (" + ds.format + ")."));
+            app.setStatus(uiText("Loaded %s", ds.name + " (" + datasetFormatLabel(ds.format) + ")."));
             if ~isempty(app.RankRows)
                 app.selectEntity(app.RankRows(1));
             end
@@ -656,14 +801,14 @@ classdef NetworkBehaviorExplorer < handle
             app.FormatBadge.Text = '';
             app.SummaryLabel.Text = '';
             app.RankTable.Data = table();
-            app.RankCountLabel.Text = '';
-            invite = ["No dataset loaded."; "Use Open dataset to import a JSON or CSV file,"; ...
-                "or run scripts/run_pipeline.m for the primary dataset."];
+            app.RankCountLabel.Text = char(uiText("No dataset loaded"));
+            app.ProvenanceTable.Data = table();
+            invite = [uiText("No dataset loaded"); uiText("Use Open dataset to select a supported file.")];
             showAxesMessage(app.NetAxes, invite, th);
-            showAxesMessage(app.TimeAxes, "The timeline appears after a dataset is loaded.", th);
-            showAxesMessage(app.MapAxes, "The relative-space view appears after a dataset is loaded.", th);
-            showAxesMessage(app.EvidenceAxes, "No dataset loaded.", th);
-            showAxesMessage(app.DetectorAxes, "No dataset loaded.", th);
+            showAxesMessage(app.TimeAxes, uiText("The timeline appears after a dataset is loaded."), th);
+            showAxesMessage(app.MapAxes, uiText("The relative-space view appears after a dataset is loaded."), th);
+            showAxesMessage(app.EvidenceAxes, uiText("No dataset loaded"), th);
+            showAxesMessage(app.DetectorAxes, uiText("No dataset loaded"), th);
             app.TimeLabel.Text = '';
             app.setControlsEnabled(false);
             app.setReplayEnabled(false);
@@ -672,9 +817,15 @@ classdef NetworkBehaviorExplorer < handle
 
         function setControlsEnabled(app, tf)
             state = matlab.lang.OnOffSwitchState(tf);
-            app.ExportButton.Enable = state;
+            app.ExportButton.Enable = matlab.lang.OnOffSwitchState(tf && app.hasData());
             app.SearchField.Enable = state;
             app.FilterDrop.Enable = state;
+        end
+
+        function tf = hasData(app)
+            b = app.Bundle;
+            tf = isstruct(b) && isscalar(b) && isfield(b, 'entities') && ...
+                istable(b.entities) && height(b.entities) > 0;
         end
 
         function setReplayEnabled(app, tf)
@@ -697,6 +848,9 @@ classdef NetworkBehaviorExplorer < handle
         function fillRanking(app)
             b = app.Bundle;
             if isempty(b)
+                app.RankRows = [];
+                app.RankTable.Data = table();
+                app.RankCountLabel.Text = char(uiText("No dataset loaded"));
                 return;
             end
             S = table();
@@ -705,11 +859,27 @@ classdef NetworkBehaviorExplorer < handle
             end
             [rows, shown] = filterRanking(b.entities, S, app.FilterDrop.Value, app.SearchText);
             app.RankRows = rows;
-            app.RankTable.Data = shown;
+            app.RankTable.Data = shown(:, {'entity','IF_rank','IF_score','base_score','events'});
             app.RankCountLabel.Text = char(uiText("%d shown", numel(rows)));
             if strlength(app.SearchText) > 0
                 app.RankCountLabel.Text = char(uiText("%d shown matching ""%s""", numel(rows), app.SearchText));
             end
+            if isempty(rows)
+                if ~any(b.entities.eligible)
+                    message = uiText("No entities have enough history to be scored.");
+                elseif strlength(strtrim(app.SearchText)) > 0
+                    message = uiText("No matches. Clear the search or change the filter.");
+                elseif string(app.FilterDrop.Value) == "Flagged (either detector)"
+                    message = uiText("No entities flagged by either detector.");
+                elseif string(app.FilterDrop.Value) == "Top 200 by Isolation Forest" && ...
+                        all(isnan(b.entities.iforest_rank))
+                    message = uiText("Isolation Forest scores are unavailable. Choose another filter.");
+                else
+                    message = uiText("No ranked entities in this filter.");
+                end
+                app.RankCountLabel.Text = char(message);
+            end
+            app.RankCountLabel.Tooltip = app.RankCountLabel.Text;
             app.highlightRankRow();
         end
 
@@ -878,7 +1048,7 @@ classdef NetworkBehaviorExplorer < handle
             catch ME
                 app.stopTimer();
                 app.PlayButton.Text = char(uiText("Play"));
-                app.setStatus("Replay stopped: " + ME.message);
+                app.setStatus(uiText("Replay stopped: %s", ME.message));
             end
         end
 
@@ -898,10 +1068,14 @@ classdef NetworkBehaviorExplorer < handle
 
         %% ------------------------------------------------------- export
         function exportViews(app)
-            if isempty(app.Bundle)
-                uialert(app.Figure, 'Load a dataset before exporting.', 'Nothing to export');
+            if ~app.hasData()
+                uialert(app.Figure, char(uiText("Load a dataset before exporting.")), char(uiText("Nothing to export")));
                 return;
             end
+            % Freeze the replay so all exported views and interval metadata
+            % describe the same cursor, even when graphics yield callbacks.
+            app.stopTimer();
+            app.PlayButton.Text = char(uiText("Play"));
             try
                 cfg = app.bundleConfig();
                 ds = bundleDatasetInfo(app.Bundle);
@@ -918,12 +1092,17 @@ classdef NetworkBehaviorExplorer < handle
                     if ~isfolder(reportDir)
                         mkdir(reportDir);
                     end
+                    % Render measured fields again instead of rewriting digits
+                    % in display text that may resemble a source identifier.
+                    summary = renderEntitySummary(app.Bundle, app.Selected);
                     writeTextFile(fullfile(reportDir, "entity_summary_" + stamp + ".txt"), ...
-                        joinStrings(app.ExplainText.Value, newline));
+                        joinStrings(summary, newline));
+                    [t0, t1] = app.window();
+                    exportInvestigation(app.Bundle, app.Selected, reportDir, t0, t1, 2000);
                 end
-                app.setStatus("Exported to " + outDir);
+                app.setStatus(uiText("Exported to %s", outDir));
             catch ME
-                uialert(app.Figure, ME.message, 'Export failed');
+                uialert(app.Figure, ME.message, char(uiText("Export failed")));
             end
         end
 
@@ -956,7 +1135,7 @@ classdef NetworkBehaviorExplorer < handle
             try
                 catalog = listDatasets(app.RootDir);
             catch ME
-                app.setStatus("Dataset catalog unavailable: " + ME.message);
+                app.setStatus(uiText("Dataset catalog unavailable: %s", ME.message));
                 catalog = table();
             end
         end
@@ -966,21 +1145,21 @@ classdef NetworkBehaviorExplorer < handle
             files = strings(0, 1);
             primary = app.primaryBundleFile();
             if isfile(primary)
-                items(end+1, 1) = "primary";
+                items(end+1, 1) = uiText("Default dataset");
                 files(end+1, 1) = primary;
             end
             catalog = app.readCatalog();
             for k = 1:height(catalog)
-                items(end+1, 1) = string(catalog.name(k)) + "  ·  " + string(catalog.format(k)); %#ok<AGROW>
+                items(end+1, 1) = string(catalog.name(k)) + "  ·  " + datasetFormatLabel(catalog.format(k)); %#ok<AGROW>
                 files(end+1, 1) = app.resolvePath(catalog.bundle_file(k)); %#ok<AGROW>
             end
             if ~isempty(app.Bundle) && ~any(files == app.BundleFile)
                 ds = bundleDatasetInfo(app.Bundle);
-                items = [ds.name + " (in memory)"; items];
+                items = [uiText("%s (current analysis)", ds.name); items];
                 files = [app.BundleFile; files];
             end
             if isempty(items)
-                app.DatasetDrop.Items = {'(no datasets yet)'};
+                app.DatasetDrop.Items = {char(uiText("No datasets available"))};
                 app.DatasetDrop.ItemsData = {''};
                 app.DatasetDrop.Enable = 'off';
                 return;
@@ -1005,8 +1184,8 @@ classdef NetworkBehaviorExplorer < handle
                 return;
             end
             app.stopTimer();
-            dlg = uiprogressdlg(app.Figure, 'Title', 'Loading dataset', ...
-                'Message', 'Loading the analysis bundle...', 'Indeterminate', 'on');
+            dlg = uiprogressdlg(app.Figure, 'Title', char(uiText("Loading dataset")), ...
+                'Message', char(uiText("Loading the saved analysis…")), 'Indeterminate', 'on');
             try
                 bundle = app.readBundleFile(file);
                 app.loadBundle(bundle, file);
@@ -1014,7 +1193,7 @@ classdef NetworkBehaviorExplorer < handle
             catch ME
                 close(dlg);
                 src.Value = evt.PreviousValue;
-                uialert(app.Figure, ME.message, 'Could not load dataset');
+                uialert(app.Figure, ME.message, char(uiText("Could not load dataset")));
             end
         end
 
@@ -1024,58 +1203,49 @@ classdef NetworkBehaviorExplorer < handle
 
         function openDataset(app)
             if ~app.importApiAvailable()
-                uialert(app.Figure, ['Dataset import is not available: inspectDatasetFile / ' ...
-                    'analyzeDataset are not on the path (run scripts/setupProject).'], ...
-                    'Import unavailable');
+                uialert(app.Figure, char(uiText("Dataset import is unavailable. Restart the application and try again.")), ...
+                    char(uiText("Import unavailable")));
                 return;
             end
             app.stopTimer();
             app.PlayButton.Text = char(uiText("Play"));
-            [f, p] = uigetfile({'*.json;*.csv;*.txt;*.tsv', 'Datasets (*.json, *.csv, *.txt, *.tsv)'}, ...
-                'Open dataset');
+            [f, p] = uigetfile({'*.json;*.csv;*.txt;*.tsv;*.binetflow', ...
+                char(uiText("Supported datasets (*.json, *.csv, *.txt, *.tsv, *.binetflow)"))}, ...
+                char(uiText("Open dataset")));
             figure(app.Figure);   % uigetfile can leave the app window behind
             if isequal(f, 0)
                 return;
             end
             path = string(fullfile(p, f));
-            app.setStatus("Inspecting " + f + " ...");
+            app.setStatus(uiText("Inspecting %s…", f));
             try
                 info = inspectDatasetFile(path);
             catch ME
-                uialert(app.Figure, ME.message, 'Could not read the file');
-                app.setStatus("Import failed.");
+                uialert(app.Figure, ME.message, char(uiText("Could not read the file")));
+                app.setStatus(uiText("Import failed."));
                 return;
             end
-            if string(info.format) == "unknown"
-                uialert(app.Figure, sprintf('The format of %s was not recognised.\n%s', f, info.message), ...
-                    'Unsupported file');
-                app.setStatus("Import cancelled: unknown format.");
+            if string(info.format) == "unknown" && isempty(info.columns)
+                uialert(app.Figure, char(uiText("The format of %s was not recognised. Choose a supported dataset or a delimited file with entity and time columns.", f)), ...
+                    char(uiText("Unsupported file")));
+                app.setStatus(uiText("Import cancelled: unknown format."));
                 return;
             end
-            [mapping, name, ok, maxRows] = app.askImportOptions(info, string(f));
+            [opts, ok] = app.askImportOptions(info, string(f));
             if ~ok
-                app.setStatus("Import cancelled.");
+                app.setStatus(uiText("Import cancelled."));
                 return;
             end
-            opts = struct('root_dir', app.RootDir);
-            if info.needs_mapping
-                opts.mapping = mapping;
-            end
-            if strlength(name) > 0
-                opts.name = name;
-            end
-            if maxRows > 0
-                opts.max_rows = maxRows;      % large traffic files (LANL)
-            end
-            dlg = uiprogressdlg(app.Figure, 'Title', 'Analysing dataset', ...
-                'Message', char("Importing " + f), 'Value', 0, 'Cancelable', false);
+            opts.root_dir = app.RootDir;
+            dlg = uiprogressdlg(app.Figure, 'Title', char(uiText("Analysing dataset")), ...
+                'Message', char(uiText("Importing %s…", f)), 'Value', 0, 'Cancelable', false);
             opts.progress = @(fraction, message) app.onProgress(dlg, fraction, message);
             try
                 bundle = analyzeDataset(path, opts);
             catch ME
                 close(dlg);
-                uialert(app.Figure, ME.message, 'Analysis failed');
-                app.setStatus("Import failed: " + ME.message);
+                uialert(app.Figure, ME.message, char(uiText("Analysis failed")));
+                app.setStatus(uiText("Import failed: %s", ME.message));
                 return;
             end
             close(dlg);
@@ -1084,7 +1254,7 @@ classdef NetworkBehaviorExplorer < handle
                 app.loadBundle(bundle, file);
                 app.refreshDatasetList();
             catch ME
-                uialert(app.Figure, ME.message, 'Could not display the dataset');
+                uialert(app.Figure, ME.message, char(uiText("Could not display the dataset")));
             end
         end
 
@@ -1093,7 +1263,7 @@ classdef NetworkBehaviorExplorer < handle
             try
                 if isvalid(dlg)
                     dlg.Value = min(max(double(fraction), 0), 1);
-                    dlg.Message = char(string(message));
+                    dlg.Message = char(uiText(string(message)));
                     drawnow limitrate;
                 end
             catch
@@ -1113,151 +1283,200 @@ classdef NetworkBehaviorExplorer < handle
             end
         end
 
-        function [mapping, name, ok, maxRows] = askImportOptions(app, info, fileName)
-            %ASKIMPORTOPTIONS Modal dialog: column mapping (if needed) + name.
+        function [opts, ok] = askImportOptions(app, info, fileName)
+            % All text layouts can be corrected explicitly, including a
+            % detected event list that should instead be read as flows.
             th = app.Theme;
-            needMap = logical(info.needs_mapping);
-            if string(info.format) == "edge_csv"
-                fields = ["source", "target", "time", "weight"];
-                labels = ["Source entity", "Target entity", "Time", "Weight"];
-                required = [true true true false];
-            else
-                fields = ["entity", "event", "time", "x", "y"];
-                labels = ["Entity ID", "Event ID", "Time", "X coordinate", "Y coordinate"];
-                required = [true false true false false];   % no event id -> one event per row
-            end
-            if ~needMap
-                fields = strings(1, 0);
-            end
-            isNetwork = string(info.format) == "network_flow";
-            nRows = numel(fields) + 4 + isNetwork;
-            w = 480;
-            h = 64 + 34 * nRows;
             fp = app.Figure.Position;
-            dlg = uifigure('Name', 'Import dataset', 'WindowStyle', 'modal', ...
-                'Position', [fp(1) + (fp(3) - w) / 2, fp(2) + (fp(4) - h) / 2, w, h], ...
-                'Color', th.color.surface, 'Resize', 'off');
-            dlg.UserData = struct('ok', false);
+            w = min(680, fp(3));
+            h = min(760, fp(4));
+            dlg = uifigure('Name', char(uiText("Import dataset")), 'WindowStyle', 'modal', ...
+                'Position', [fp(1)+(fp(3)-w)/2, fp(2)+(fp(4)-h)/2, w, h], ...
+                'Color', th.color.surface);
             dlg.CloseRequestFcn = @(src, ~) app.finishDialog(src, struct('ok', false));
-            g = uigridlayout(dlg, [nRows 2]);
-            g.ColumnWidth = {140, '1x'};
-            g.RowHeight = [{'fit'}, repmat({26}, 1, nRows - 2), {32}];
+            g = uigridlayout(dlg, [10 2]);
+            g.ColumnWidth = {200, '1x'};
+            g.RowHeight = {44, 32, '1x', 32, 32, 32, 32, 32, 40, 36};
             g.Padding = [16 16 16 16];
             app.setIf(g, 'BackgroundColor', th.color.surface);
-
-            if needMap
-                intro = sprintf(['%s (%s). Choose which column holds each field; ' ...
-                    '* = required.'], fileName, info.format);
-            else
-                intro = sprintf('%s (%s). Columns were detected automatically.', ...
-                    fileName, info.format);
+            intro = app.label(g, uiText("Review the layout, columns and timestamps before analysing %s.", fileName), ...
+                th.font.base, th.color.text, 'normal');
+            intro.Layout.Row = 1; intro.Layout.Column = [1 2];
+            app.setIf(intro, 'WordWrap', 'on');
+            field = app.label(g, uiText("Data layout"), th.font.base, th.color.textSecondary, 'normal');
+            field.Layout.Row = 2; field.Layout.Column = 1;
+            layouts = ["event_csv", "edge_csv", "generic_network_flow"];
+            titles = [uiText("Event participation rows"), uiText("Timestamped connections"), uiText("Network flow columns")];
+            selected = string(info.format);
+            if selected == "network_flow" && string(cfgGet(info,"profile","")) == "generic_network_flow"
+                selected = "generic_network_flow";
+            elseif selected == "network_flow"
+                layouts = ["network_flow", layouts];
+                titles = [uiText("Detected network profile"), titles];
+            elseif selected == "networkx_burglary_json"
+                layouts = selected;
+                titles = uiText("Shared-event JSON");
+            elseif ~any(layouts == selected)
+                layouts = ["", layouts];
+                titles = [uiText("Choose a data layout"), titles];
+                selected = "";
             end
-            msg = app.label(g, intro, th.font.base, th.color.text, 'normal');
-            msg.Layout.Row = 1;
-            msg.Layout.Column = [1 2];
-            app.setIf(msg, 'WordWrap', 'on');
-
-            items = [app.NoneItem, reshape(string(info.columns), 1, [])];
-            drops = gobjects(1, numel(fields));
-            for k = 1:numel(fields)
-                txt = labels(k);
-                if required(k)
-                    txt = txt + " *";
-                end
-                fieldLabel = app.label(g, txt, th.font.base, th.color.textSecondary, 'normal');
-                fieldLabel.Layout.Row = k + 1;
-                fieldLabel.Layout.Column = 1;
-                pre = app.NoneItem;
-                if isfield(info.mapping, fields(k)) && any(items == string(info.mapping.(fields(k))))
-                    pre = string(info.mapping.(fields(k)));
-                end
-                drops(k) = uidropdown(g, 'Items', cellstr(items), 'Value', char(pre), ...
-                    'FontName', th.font.family, 'FontSize', th.font.base);
-                drops(k).Layout.Row = k + 1;
-                drops(k).Layout.Column = 2;
+            layout = uidropdown(g, 'Items', cellstr(titles), 'ItemsData', cellstr(layouts), ...
+                'Value', char(selected), 'FontName', th.font.family, 'FontSize', th.font.base);
+            layout.Layout.Row = 2; layout.Layout.Column = 2;
+            panel = uipanel(g, 'BorderType', 'none', 'BackgroundColor', th.color.surface);
+            panel.Layout.Row = 3; panel.Layout.Column = [1 2];
+            mg = uigridlayout(panel, [14 2]);
+            mg.ColumnWidth = {200, '1x'};
+            mg.Padding = [0 0 0 0];
+            app.setIf(mg, 'BackgroundColor', th.color.surface);
+            app.setIf(mg, 'Scrollable', 'on');
+            roles = ["entity","event","source","target","time","weight","x","y", ...
+                "duration","bytes","packets","sport","dport","proto"];
+            labels = ["Entity ID","Event ID","Source entity","Target entity","Time","Weight", ...
+                "X coordinate","Y coordinate","Duration (seconds)","Bytes","Packets", ...
+                "Source port","Destination port","Protocol"];
+            items = [app.NoneItem, reshape(string(info.columns),1,[])];
+            displayItems = items; displayItems(1) = uiText(app.NoneItem);
+            drops = gobjects(1,numel(roles));
+            fieldLabels = gobjects(1,numel(roles));
+            for k = 1:numel(roles)
+                fieldLabels(k) = app.label(mg, uiText(labels(k)), th.font.base, th.color.textSecondary, 'normal');
+                fieldLabels(k).Layout.Row = k; fieldLabels(k).Layout.Column = 1;
+                pre = app.proposedImportColumn(info, roles(k));
+                if ~any(items == pre), pre = app.NoneItem; end
+                drops(k) = uidropdown(mg, 'Items', cellstr(displayItems), 'ItemsData', cellstr(items), ...
+                    'Value', char(pre), 'FontName', th.font.family, 'FontSize', th.font.base);
+                drops(k).Layout.Row = k; drops(k).Layout.Column = 2;
             end
-            r = numel(fields) + 2;
-            nameLabel = app.label(g, "Name (optional)", th.font.base, th.color.textSecondary, 'normal');
-            nameLabel.Layout.Row = r;
-            nameLabel.Layout.Column = 1;
-            [~, stem] = fileparts(fileName);
-            nameField = uieditfield(g, 'text', 'Value', char(stem), ...
+            field = app.label(g, uiText("Timestamp unit"), th.font.base, th.color.textSecondary, 'normal');
+            field.Layout.Row = 4; field.Layout.Column = 1;
+            units = ["auto","posix_s","posix_ms","excel","datenum","yyyymmdd"];
+            unitTitles = [uiText("Automatic"),uiText("Unix seconds"),uiText("Unix milliseconds"), ...
+                uiText("Excel serial date"),uiText("MATLAB serial date"),"YYYYMMDD"];
+            unit = uidropdown(g, 'Items', cellstr(unitTitles), 'ItemsData', cellstr(units), 'Value', 'auto', ...
                 'FontName', th.font.family, 'FontSize', th.font.base);
-            nameField.Layout.Row = r;
-            nameField.Layout.Column = 2;
-            maxField = [];
-            if isNetwork
-                % Traffic files can hold hundreds of millions of records.
-                r = r + 1;
-                maxLabel = app.label(g, "Max records (0 = all)", th.font.base, ...
-                    th.color.textSecondary, 'normal');
-                maxLabel.Layout.Row = r;
-                maxLabel.Layout.Column = 1;
-                maxField = uieditfield(g, 'numeric', 'Value', 0, 'Limits', [0 Inf], ...
-                    'RoundFractionalValues', 'on', 'FontName', th.font.family, ...
-                    'FontSize', th.font.base);
-                maxField.Layout.Row = r;
-                maxField.Layout.Column = 2;
-            end
-            note = app.label(g, "Identifiers are pseudonymized; the analysis may take a while.", ...
+            unit.Layout.Row = 4; unit.Layout.Column = 2;
+            field = app.label(g, uiText("Timestamp format (optional)"), th.font.base, th.color.textSecondary, 'normal');
+            field.Layout.Row = 5; field.Layout.Column = 1;
+            timeFormat = uieditfield(g, 'text', 'FontName', th.font.family, 'FontSize', th.font.base);
+            timeFormat.Layout.Row = 5; timeFormat.Layout.Column = 2;
+            app.setIf(timeFormat, 'Placeholder', 'yyyy-MM-dd HH:mm:ss');
+            field = app.label(g, uiText("First record"), th.font.base, th.color.textSecondary, 'normal');
+            field.Layout.Row = 6; field.Layout.Column = 1;
+            first = uieditfield(g, 'numeric', 'Value', 1, 'Limits', [1 Inf], ...
+                'FontName', th.font.family, 'FontSize', th.font.base);
+            first.Layout.Row = 6; first.Layout.Column = 2;
+            field = app.label(g, uiText("Max records (0 = all)"), th.font.base, th.color.textSecondary, 'normal');
+            field.Layout.Row = 7; field.Layout.Column = 1;
+            maximum = uieditfield(g, 'numeric', 'Value', 0, 'Limits', [0 Inf], ...
+                'FontName', th.font.family, 'FontSize', th.font.base);
+            maximum.Layout.Row = 7; maximum.Layout.Column = 2;
+            field = app.label(g, uiText("Name (optional)"), th.font.base, th.color.textSecondary, 'normal');
+            field.Layout.Row = 8; field.Layout.Column = 1;
+            [~, stem] = fileparts(fileName);
+            name = uieditfield(g, 'text', 'Value', char(stem), 'FontName', th.font.family, 'FontSize', th.font.base);
+            name.Layout.Row = 8; name.Layout.Column = 2;
+            note = app.label(g, uiText("Required columns are marked *. Record limits apply to network flows."), ...
                 th.font.small, th.color.textSecondary, 'normal');
-            note.Layout.Row = r + 1;
-            note.Layout.Column = [1 2];
-            btns = uigridlayout(g, [1 3]);
-            btns.Layout.Row = r + 2;
-            btns.Layout.Column = [1 2];
-            btns.ColumnWidth = {'1x', 100, 120};
-            btns.Padding = [0 0 0 0];
-            app.setIf(btns, 'BackgroundColor', th.color.surface);
-            app.label(btns, "", th.font.base, th.color.text, 'normal');
-            app.plainButton(btns, 'Cancel', 'Close without importing', ...
+            note.Layout.Row = 9; note.Layout.Column = [1 2];
+            app.setIf(note, 'WordWrap', 'on');
+            buttons = uigridlayout(g, [1 3]);
+            buttons.Layout.Row = 10; buttons.Layout.Column = [1 2];
+            buttons.ColumnWidth = {'1x',100,120}; buttons.Padding = [0 0 0 0];
+            app.setIf(buttons, 'BackgroundColor', th.color.surface);
+            app.label(buttons, "", th.font.small, th.color.text, 'normal');
+            app.plainButton(buttons, char(uiText("Cancel")), char(uiText("Close without importing")), ...
                 @(~, ~) app.finishDialog(dlg, struct('ok', false)));
-            uibutton(btns, 'Text', 'Analyse', 'FontName', th.font.family, ...
-                'FontSize', th.font.base, 'FontWeight', 'bold', ...
-                'BackgroundColor', th.color.accent, 'FontColor', th.color.accentText, ...
-                'ButtonPushedFcn', @(~, ~) app.onImportOk(dlg, drops, fields, labels, required, ...
-                nameField, maxField));
-
+            app.plainButton(buttons, char(uiText("Analyse")), char(uiText("Analyse")), ...
+                @(~, ~) app.onImportOk(dlg));
+            controls = struct('layout',layout,'outerGrid',g,'mappingGrid',mg,'roles',roles,'labels',labels, ...
+                'fieldLabels',fieldLabels,'drops',drops,'unit',unit,'timeFormat',timeFormat, ...
+                'first',first,'maximum',maximum,'name',name);
+            dlg.UserData = struct('ok',false,'info',info,'controls',controls);
+            layout.ValueChangedFcn = @(~, ~) app.updateImportLayout(dlg);
+            app.updateImportLayout(dlg);
             uiwait(dlg);
-            res = struct('ok', false);
+            opts = struct(); ok = false;
             if isvalid(dlg)
-                res = dlg.UserData;
+                result = dlg.UserData;
+                ok = isfield(result,'ok') && result.ok;
+                if ok, opts = result.options; end
                 delete(dlg);
-            end
-            ok = isfield(res, 'ok') && res.ok;
-            mapping = app.emptyMapping();
-            name = "";
-            maxRows = 0;
-            if ok
-                mapping = res.mapping;
-                name = res.name;
-                maxRows = res.max_rows;
             end
         end
 
-        function onImportOk(app, dlg, drops, fields, labels, required, nameField, maxField)
-            mapping = app.emptyMapping();
-            missing = strings(1, 0);
-            for k = 1:numel(fields)
-                v = string(drops(k).Value);
-                if v == app.NoneItem
-                    if required(k)
-                        missing(end+1) = labels(k); %#ok<AGROW>
-                    end
-                else
-                    mapping.(fields(k)) = v;
-                end
+        function updateImportLayout(app, dlg)
+            c = dlg.UserData.controls;
+            layout = string(c.layout.Value);
+            fields = strings(1,0); required = strings(1,0);
+            if layout == "event_csv"
+                fields = ["entity","event","time","x","y"]; required = ["entity","time"];
+            elseif layout == "edge_csv"
+                fields = ["source","target","time","weight"]; required = ["source","target","time"];
+            elseif layout == "generic_network_flow"
+                fields = ["source","target","time","duration","bytes","packets","sport","dport","proto"];
+                required = ["source","target","time"];
             end
-            if ~isempty(missing)
-                uialert(dlg, "Choose a column for: " + joinStrings(missing, ", "), 'Missing columns');
+            heights = repmat({0},1,numel(c.roles));
+            for k = 1:numel(c.roles)
+                shown = ismember(c.roles(k), fields);
+                c.drops(k).Visible = matlab.lang.OnOffSwitchState(shown);
+                c.fieldLabels(k).Visible = matlab.lang.OnOffSwitchState(shown);
+                if shown, heights{k} = 32; end
+                text = uiText(c.labels(k));
+                if ismember(c.roles(k),required), text = text + " *"; end
+                c.fieldLabels(k).Text = char(text);
+            end
+            c.mappingGrid.RowHeight = heights;
+            outerRows = c.outerGrid.RowHeight;
+            if isempty(fields), outerRows{3} = 0; else, outerRows{3} = '1x'; end
+            c.outerGrid.RowHeight = outerRows;
+            c.first.Enable = matlab.lang.OnOffSwitchState(ismember(layout,["network_flow","generic_network_flow"]));
+            c.maximum.Enable = c.first.Enable;
+            c.unit.Enable = matlab.lang.OnOffSwitchState(layout ~= "networkx_burglary_json");
+            c.timeFormat.Enable = c.unit.Enable;
+        end
+
+        function column = proposedImportColumn(~, info, role)
+            column = string(cfgGet(info.mapping, role, ""));
+            if strlength(column) > 0, return; end
+            aliases = role;
+            switch role
+                case "source", aliases = ["src","srcaddr","source","source_ip","src_ip"];
+                case "target", aliases = ["dst","dstaddr","target","destination","destination_ip","dst_ip"];
+                case "time", aliases = ["timestamp","time","starttime","stime","date"];
+                case "duration", aliases = ["duration","duration_s","dur","flow_duration"];
+                case "bytes", aliases = ["bytes","totbytes","total_bytes"];
+                case "packets", aliases = ["packets","totpkts","total_packets"];
+                case "sport", aliases = ["sport","src_port","source_port"];
+                case "dport", aliases = ["dport","dst_port","destination_port"];
+                case "proto", aliases = ["proto","protocol"];
+            end
+            names = reshape(string(info.columns),1,[]);
+            for alias = aliases
+                k = find(strcmpi(names,alias),1);
+                if ~isempty(k), column = names(k); return; end
+            end
+        end
+
+        function onImportOk(app, dlg)
+            c = dlg.UserData.controls;
+            form = struct('layout',string(c.layout.Value),'mapping',struct(), ...
+                'name',string(c.name.Value),'time_unit',string(c.unit.Value), ...
+                'time_format',string(c.timeFormat.Value),'first_row',c.first.Value,'max_rows',c.maximum.Value);
+            for k = 1:numel(c.roles)
+                value = string(c.drops(k).Value);
+                if value == app.NoneItem, value = ""; end
+                form.mapping.(c.roles(k)) = value;
+            end
+            try
+                options = importDialogOptions(dlg.UserData.info,form);
+            catch ME
+                uialert(dlg, ME.message, char(uiText("Check import options")));
                 return;
             end
-            maxRows = 0;
-            if ~isempty(maxField)
-                maxRows = maxField.Value;
-            end
-            app.finishDialog(dlg, struct('ok', true, 'mapping', mapping, ...
-                'name', strtrim(string(nameField.Value)), 'max_rows', maxRows));
+            app.finishDialog(dlg, struct('ok',true,'options',options));
         end
 
         function finishDialog(~, dlg, result)
@@ -1265,9 +1484,5 @@ classdef NetworkBehaviorExplorer < handle
             uiresume(dlg);
         end
 
-        function m = emptyMapping(~)
-            m = struct('entity', "", 'event', "", 'time', "", 'x', "", 'y', "", ...
-                'source', "", 'target', "", 'weight', "");
-        end
     end
 end

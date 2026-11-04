@@ -40,6 +40,16 @@ jobs:
       # mh_lint exits non-zero on any lint finding, failing the job.
       - run: mh_lint .
 
+  network-reference-tests:
+    name: Network provenance reference tests (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 -m unittest discover -s tests/reference -p 'test_*.py' -v
+
   reference-audit:
     name: Dataset reference audit (Python)
     runs-on: ubuntu-latest

@@ -90,7 +90,10 @@ end
 
 cfg.temporal.snapshot_years = year(t0):year(tMax);
 if ismember(unit, ["month", "week"])
-    cfg.temporal.snapshot_starts = datetime.empty(0, 1);   % yearly windows
+    % Explicit edges exclude a duplicate closing January boundary when
+    % the final observed year contributes only an omitted partial bin.
+    yearly = datetime((year(t0):year(t1))', 1, 1);
+    cfg.temporal.snapshot_starts = [yearly(yearly < t1); t1];
     notes(end+1,1) = "Dynamic-graph windows: calendar years " + year(t0) + "-" + year(tMax) + ".";
 else
     k = min(8, nBins);

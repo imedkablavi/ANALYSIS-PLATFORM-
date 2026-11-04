@@ -22,8 +22,8 @@ function ds = importDataset(path, opts)
 %     max_rows, labels_file   network_flow options (importNetworkFlows)
 %     date_format   primary JSON date format (default from projectConfig)
 %
-%   ds.meta always contains: id (name slug + first 8 hex of the Git blob
-%   SHA, so re-importing the same file gives the same id), name, format,
+%   ds.meta always contains: id (name slug + import identity hash, including
+%   slice, mapping and label content), source sha, import_sha, name, format,
 %   source_file, sha, imported, mapping, n_rows, n_entities, n_events,
 %   has_coordinates, pseudonymized, links_provided, expected_entity_type,
 %   import_notes.
@@ -33,6 +33,8 @@ arguments
     opts struct = struct()
 end
 
+opts = validateImportOptions(opts);
+
 if isfield(opts, "info")
     info = opts.info;
 elseif isfield(opts, "format") && string(opts.format) == "networkx_burglary_json"
@@ -41,7 +43,21 @@ else
     info = inspectDatasetFile(path);
 end
 fmt = string(cfgGet(opts, "format", info.format));
+if fmt ~= "network_flow" && (cfgGet(opts, "first_row", 1) ~= 1 || ...
+        isfinite(cfgGet(opts, "max_rows", Inf)))
+    error("MOSAIC:UnsupportedSelection", ...
+        "Record slicing is supported for network-flow imports only.");
+end
 mapping = mergeMapping(info.mapping, cfgGet(opts, "mapping", struct()));
+if isfield(opts, "mapping")
+    % Explicit dialog aliases override auto-detected role names.
+    if isfield(opts.mapping, "source")
+        mapping.src = string(opts.mapping.source);
+    end
+    if isfield(opts.mapping, "target")
+        mapping.dst = string(opts.mapping.target);
+    end
+end
 [~, stem] = fileparts(path);
 name = string(cfgGet(opts, "name", stem));
 if strlength(name) == 0
@@ -56,7 +72,20 @@ meta.source_file = path;
 meta.sha = sha;
 meta.imported = datetime('now');
 meta.mapping = mapping;
-meta.id = slug(name) + "-" + extractBefore(sha + "00000000", 9);
+identity = struct('source_sha', sha, 'format', fmt, 'mapping', mapping, ...
+    'profile', string(cfgGet(opts, "profile", cfgGet(info, "profile", ""))), ...
+    'first_row', cfgGet(opts, "first_row", 1), 'max_rows', cfgGet(opts, "max_rows", Inf), ...
+    'time_unit', string(cfgGet(opts, "time_unit", "auto")), ...
+    'time_formats', string(cfgGet(opts, "time_formats", strings(1,0))), ...
+    'date_format', string(cfgGet(opts, "date_format", "yyyy-MM-dd HH:mm:ss")), ...
+    'pseudonymize', cfgGet(opts, "pseudonymize", true), ...
+    'keep_id_map', cfgGet(opts, "keep_id_map", false), 'labels_sha', "");
+labelsFile = string(cfgGet(opts, "labels_file", ""));
+if strlength(labelsFile) > 0
+    [~, identity.labels_sha] = verifyGitBlobSha(labelsFile);
+end
+meta.import_sha = identitySha(identity);
+meta.id = slug(name) + "-" + extractBefore(meta.import_sha, 17);
 meta.import_notes = strings(0,1);
 
 switch fmt
@@ -77,10 +106,15 @@ switch fmt
 
     case {"event_csv", "edge_csv"}
         % Identifier columns are read as text (never as double).
-        T = readDelimitedTable(path, [mapping.entity, mapping.event, mapping.source, mapping.target]);
+        timeText = strings(1,0);
+        if isfield(opts, "time_formats") || isfield(opts, "date_format")
+            timeText = mapping.time;
+        end
+        T = readDelimitedTable(path, [mapping.entity, mapping.event, mapping.source, mapping.target, timeText]);
         canon = struct('pseudonymize', cfgGet(opts, "pseudonymize", true), ...
             'keep_id_map', cfgGet(opts, "keep_id_map", false));
         timeUnit = string(cfgGet(opts, "time_unit", "auto"));
+        timeFormats = string(cfgGet(opts, "time_formats", cfgGet(opts, "date_format", strings(1,0))));
         % An explicitly requested format wins over column detection.
         useEdges = fmt == "edge_csv" || (~isfield(opts, "format") && ...
             mapping.source ~= "" && mapping.target ~= "");
@@ -90,7 +124,7 @@ switch fmt
             h = height(T);
             src = string(T.(mapping.source));
             dst = string(T.(mapping.target));
-            [t, tNote] = parseTimeColumn(T.(mapping.time), timeUnit);
+            [t, tNote] = parseTimeColumn(T.(mapping.time), timeUnit, timeFormats);
             evId = "e" + string((1:h)');
             self = src == dst;            % self-interaction: one participant
             meta.format = "edge_csv";
@@ -114,7 +148,7 @@ switch fmt
             else
                 ev = strings(height(T), 1);
             end
-            [t, tNote] = parseTimeColumn(T.(mapping.time), timeUnit);
+            [t, tNote] = parseTimeColumn(T.(mapping.time), timeUnit, timeFormats);
             x = numericColumn(T, mapping.x);
             y = numericColumn(T, mapping.y);
             meta.format = "event_csv";
@@ -127,6 +161,7 @@ switch fmt
         if profileId == ""
             error("MOSAIC:UnknownProfile", "network_flow needs a profile (see networkFlowProfiles).");
         end
+        opts.mapping = mapping;
         ds = importNetworkFlows(path, profileId, meta, opts);
 
     otherwise
@@ -172,4 +207,15 @@ if isempty(s)
     s = 'dataset';
 end
 s = string(s(1:min(end, 40)));
+end
+
+function sha = identitySha(value)
+% Sorted nested fields make mapping insertion order irrelevant.
+value.mapping = orderfields(value.mapping);
+value = orderfields(value);
+bytes = unicode2native(jsonencode(value), 'UTF-8');
+md = java.security.MessageDigest.getInstance('SHA-256');
+md.update(typecast(uint8(bytes), 'int8'));
+digest = typecast(md.digest(), 'uint8');
+sha = lower(string(reshape(dec2hex(digest, 2)', 1, [])));
 end

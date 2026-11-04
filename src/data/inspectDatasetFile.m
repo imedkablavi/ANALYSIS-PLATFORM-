@@ -49,6 +49,11 @@ if ext == ".json"
     return;
 end
 
+if ~ismember(ext, ["", ".csv", ".tsv", ".txt", ".binetflow"])
+    info.message = "Unsupported file type. Choose delimited flow text, not a binary or compressed capture.";
+    return;
+end
+
 try
     opts = textImportOptions(path);
 catch ME
@@ -60,11 +65,22 @@ info.columns = names;
 low = lower(strtrim(names));
 m = emptyMapping();
 
-[p, ~, profileMsg] = matchNetworkProfile(path, names);
+[p, cols, profileMsg] = matchNetworkProfile(path, names);
 if ~isempty(p)
     info.format = "network_flow";
     info.profile = p.id;
     info.needs_mapping = false;
+    if p.id == "generic_network_flow"
+        info.mapping = m;
+        roles = string(fieldnames(cols))';
+        for role = roles
+            info.mapping.(role) = cols.(role);
+        end
+        info.mapping.source = cols.src;
+        info.mapping.target = cols.dst;
+        required = [cols.src, cols.dst, cols.time];
+        info.needs_mapping = any(required == "") || numel(unique(required)) ~= 3;
+    end
     info.message = profileMsg;
     return;
 end

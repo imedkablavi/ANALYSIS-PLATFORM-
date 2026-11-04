@@ -35,10 +35,19 @@ arguments
     opts struct = struct()
 end
 
+opts = validateImportOptions(opts);
 base = textImportOptions(path);
 names = reshape(string(base.VariableNames), 1, []);
-[p, cols, profileMsg] = matchNetworkProfile(path, names, profileId);
+[p, cols, profileMsg] = matchNetworkProfile(path, names, profileId, cfgGet(opts, "mapping", struct()));
 
+if isfield(opts, "time_unit")
+    p.time_unit = string(opts.time_unit);
+end
+if isfield(opts, "time_formats")
+    p.time_formats = string(opts.time_formats);
+elseif isfield(opts, "date_format")
+    p.time_formats = string(opts.date_format);
+end
 textRoles = ["src", "dst", "sport", "dport", "proto", "state", "outcome", "label", "label_detail"];
 textCols = strings(1,0);
 for r = textRoles
@@ -89,6 +98,11 @@ bytes = numberOf(T, cols.bytes);
 packets = numberOf(T, cols.packets);
 sport = numberOf(T, cols.sport);
 dport = numberOf(T, cols.dport);
+validateMeasure(duration, "duration");
+validateMeasure(bytes, "bytes");
+validateMeasure(packets, "packets");
+validatePort(sport, "source port");
+validatePort(dport, "destination port");
 proto = categorical(textOf(T, cols.proto));
 failed = NaN(h, 1);
 if cols.outcome ~= ""
@@ -106,6 +120,24 @@ if p.id == "lanl_auth" && isfield(opts, "labels_file") && strlength(string(opts.
 end
 notes(end+1,1) = labelNote;
 
+% Drop the entire record before either representation is constructed.
+validEndpoints = src ~= "" & dst ~= "";
+nDropped = nnz(~validEndpoints);
+if nDropped > 0
+    notes(end+1,1) = sprintf("%d records without a source or destination host were dropped.", nDropped);
+    src = src(validEndpoints); dst = dst(validEndpoints); t = t(validEndpoints);
+    duration = duration(validEndpoints); bytes = bytes(validEndpoints);
+    packets = packets(validEndpoints); sport = sport(validEndpoints); dport = dport(validEndpoints);
+    proto = proto(validEndpoints); failed = failed(validEndpoints);
+    labelClass = labelClass(validEndpoints); labelRole = labelRole(validEndpoints);
+    labelDetail = labelDetail(validEndpoints);
+end
+nSourceRows = h;
+h = numel(src);
+if h == 0
+    error("MOSAIC:EmptyDataset", "No records have both source and destination hosts.");
+end
+
 % --- Canonical dataset: hosts = entities, one event per flow -----------------------
 self = src == dst;
 evId = "f" + string((1:h)');
@@ -115,7 +147,7 @@ meta.format = "network_flow";
 meta.profile = p.id;
 meta.profile_name = p.name;
 meta.profile_check = profileMsg;
-meta.n_rows = h;
+meta.n_rows = nSourceRows;
 meta.import_notes = [reshape(string(cfgGet(meta, "import_notes", strings(0,1))), [], 1); ...
     "Each record is one event between its source and destination host; " + ...
     "tie strength = number of shared flows."; notes];
@@ -200,4 +232,16 @@ cls(hit) = "malicious";
 note = sprintf("Labels: %d of %d red-team events of %s matched the records read " + ...
     "(red team = authorised attack simulation; other events treated as benign).", ...
     nnz(ismember(rk, ek)), numel(rk), file);
+end
+
+function validateMeasure(values, role)
+if any(~isnan(values) & (~isfinite(values) | values < 0))
+    error("MOSAIC:InvalidFlowValues", "%s must be nonnegative finite values or missing.", role);
+end
+end
+
+function validatePort(values, role)
+if any(~isnan(values) & (~isfinite(values) | values < 0 | values > 65535 | values ~= round(values)))
+    error("MOSAIC:InvalidFlowValues", "%s must be integers from 0 to 65535 or missing.", role);
+end
 end

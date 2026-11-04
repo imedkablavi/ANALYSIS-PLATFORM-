@@ -4,14 +4,19 @@
 % Set QUICK = true for a smoke run (1 repeat, fewer seeds).
 % DATASET selects the bundle:
 %   ""        the primary bundle (scripts/run_pipeline.m)
-%   "latest"  the most recently analysed dataset (analyzeDataset, e.g. CTU-13)
+%   "latest"  default: the most recently analysed dataset (analyzeDataset, e.g. CTU-13)
 %   "<id>"    a dataset_id from listDatasets / outputs/datasets/catalog.json
 % Imported datasets use the configuration stored in their bundle (time
 % bins etc. adapted by configureForDataset) and write to
 % outputs/datasets/<id>/experiments/.
 
+% Optional controlled feature perturbations, isolated under research_synthetic/.
+% These are research sensitivity checks, never observed detection results.
+INCLUDE_SYNTHETIC = false;
 QUICK = false;
-DATASET = "";
+if ~exist('DATASET', 'var')
+    DATASET = "latest";
+end
 
 addpath(fullfile(fileparts(mfilename("fullpath"))));
 rootDir = setupProject();
@@ -44,6 +49,6 @@ if DATASET ~= ""
 end
 fprintf("Experiments on %s\n", bundleFile);
 clk = tic;
-results = runExperiments(S.bundle, cfg, outDir, struct('quick', QUICK));
+results = runExperiments(S.bundle, cfg, outDir, struct('quick', QUICK, 'include_synthetic', INCLUDE_SYNTHETIC));
 fprintf("Experiments finished in %.1f s. Summary: %s\n", toc(clk), ...
     fullfile(outDir, "experiments_summary.md"));

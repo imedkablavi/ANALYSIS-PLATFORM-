@@ -54,12 +54,12 @@ function t = appTheme()
 t.name = "Analysis light";
 
 % Typography: one sans family everywhere (no display or serif faces).
-t.font.family = "Helvetica";
-t.font.base = 12;
-t.font.small = 10;
-t.font.axis = 10;
-t.font.title = 12;
-t.font.header = 16;
+t.font.family = interfaceFont();
+t.font.base = 13;
+t.font.small = 11;
+t.font.axis = 11;
+t.font.title = 14;
+t.font.header = 18;
 t.font.kpi = 20;
 
 % Chrome.
@@ -104,7 +104,7 @@ t.status.icon = struct('good', "✓", 'warning', "!", 'critical', "✕");
 % Categorical palette of the six feature groups (fixed order).
 t.groups.names = ["activity", "temporal", "spatial", "cooffending", "graph", ...
     "sequence", "network"];
-t.groups.labels = ["Activity", "Temporal", "Spatial", "Co-offending", "Graph", ...
+t.groups.labels = ["Activity", "Temporal", "Spatial", "Peer interactions", "Graph", ...
     "Sequence", "Network traffic"];
 t.groups.colors = [hex("#2a78d6"); hex("#eb6834"); hex("#1baf7a"); ...
     hex("#eda100"); hex("#e87ba4"); hex("#008300"); hex("#6250d6")];
@@ -129,6 +129,26 @@ end
 function rgb = hex(h)
 h = char(h);
 rgb = [hex2dec(h(2:3)), hex2dec(h(4:5)), hex2dec(h(6:7))] / 255;
+end
+
+function family = interfaceFont()
+% Cache discovery: plotting a replay frame calls appTheme repeatedly.
+persistent chosen
+if isempty(chosen)
+    chosen = string(get(groot, 'defaultUicontrolFontName'));
+    try
+        available = string(listfonts());
+        for candidate = ["Segoe UI", "Noto Sans", "DejaVu Sans", "Arial", "Helvetica"]
+            if any(strcmpi(available, candidate))
+                chosen = candidate;
+                break;
+            end
+        end
+    catch
+        % MATLAB's platform default remains usable without font discovery.
+    end
+end
+family = chosen;
 end
 
 function c = lookupGroupColor(g, names, colors, other)
