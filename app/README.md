@@ -3,9 +3,15 @@
 `NetworkBehaviorExplorer` provides linked host ranking, neighbourhood,
 timeline, measured feature evidence, supporting flows, provenance and export.
 
-Run `scripts/run_network_demo.m` for the complete verified CTU-13 input, or
-`scripts/launch_app.m` to open the application and choose a supported dataset.
-Analytical functions remain in `src/`; callbacks connect selections and views.
+From the project root, run `run('START_PROJECT.m')` in MATLAB to open the
+latest valid saved network analysis and all explorer views without re-running
+the analysis. If no saved network result exists, the app opens in an empty
+state and lets you select a dataset.
+
+Run `scripts/run_network_demo.m` only when you intentionally want to verify
+and analyse the full official CTU-13 capture again. `scripts/launch_app.m`
+remains an alternative entry point. Analytical functions remain in `src/`;
+callbacks connect selections and views.
 
 The current implementation requires GUI acceptance in the target MATLAB
 installation. Historical screenshots/runs do not validate later changes.

@@ -26,9 +26,9 @@ classdef NetworkBehaviorExplorer < handle
     %   ranking table, clicking a node in the network, or choosing a
     %   partner updates the network, timeline, relative-space view, the
     %   detector scatter and all detail tabs together. The time slider /
-    %   Play button replays the network, density view and timeline month by
-    %   month; unusual months are signalled visually and, optionally, by a
-    %   short audio cue.
+    %   Play button replays the timeline (and relative-space view when
+    %   coordinates exist). The selected device's full-run network snapshot is
+    %   kept fixed during playback to avoid rebuilding a costly graph layout.
     %
     %   Dataset import (Open dataset...) uses the dataset-import layer:
     %   inspectDatasetFile -> optional column-mapping dialog ->
@@ -101,10 +101,12 @@ classdef NetworkBehaviorExplorer < handle
             'Top 200 by baseline', 'All eligible'}
         Disclaimer = "Scores are statistical deviations, not evidence of wrongdoing"
         NoneItem = "(not used)"
+        InitialFlowRows = 500
+        InitialPartnerRows = 150
     end
 
     methods
-        function app = NetworkBehaviorExplorer(source)
+        function app = NetworkBehaviorExplorer(source, sourceFile)
             app.Theme = appTheme();
             % Interface language: last choice, Turkish by default.
             try
@@ -123,6 +125,11 @@ classdef NetworkBehaviorExplorer < handle
                 end
             elseif isstruct(source)
                 bundle = source;
+                % Optional source path keeps the saved-analysis catalog in sync
+                % when the already-loaded bundle is passed by the one-command launcher.
+                if nargin >= 2 && ~isempty(sourceFile)
+                    file = string(sourceFile);
+                end
             else
                 file = string(source);
                 if ~isfile(file)
@@ -184,6 +191,9 @@ classdef NetworkBehaviorExplorer < handle
             if isempty(b) || isempty(entityIndex)
                 return;
             end
+            % Stop the timer before context extraction and table rebuilding.
+            app.stopTimer();
+            app.PlayButton.Text = char(uiText("Play"));
             ds = bundleDatasetInfo(b);
             try
                 ctx = getEntityContext(b, entityIndex);
@@ -204,7 +214,7 @@ classdef NetworkBehaviorExplorer < handle
             app.ExplainText.Value = renderEntitySummary(b, entityIndex);
 
             if isfield(b, 'flows') && ~isempty(b.flows)
-                [observations, total] = hostFlowEvidence(b, entityIndex, 2000);
+                [observations, total] = hostFlowEvidence(b, entityIndex, app.InitialFlowRows);
                 app.EventTable.Data = observations;
                 app.ExplainText.Value = [string(app.ExplainText.Value); ""; ...
                     uiText("Supporting observations: %d of %d flows shown. Full-run scores; observations do not attribute a score to a particular flow.", ...
@@ -213,16 +223,17 @@ classdef NetworkBehaviorExplorer < handle
                 app.EventTable.Data = app.eventDisplayTable(ctx.events, ds);
             end
             app.translateTableHeaders(app.EventTable);
-            % Busy hosts have >100,000 partners: show the 500 strongest
-            % (ctx.partners is sorted by shared events) so the table stays fast.
-            pt = ctx.partners(1:min(500, height(ctx.partners)), :);
+            % Busy hosts can have very large neighbourhoods. Show only the
+            % strongest initial subset; the complete relation data remains in
+            % the saved analysis bundle.
+            pt = ctx.partners(1:min(app.InitialPartnerRows, height(ctx.partners)), :);
             app.PartnerTable.Data = table(pt.partner_id, pt.shared_crimes, ...
                 string(pt.first_time, ds.time_format), string(pt.last_time, ds.time_format), ...
                 round(pt.partner_iforest_score, 3), 'VariableNames', ...
                 {'partner', 'shared_events', 'first', 'last', 'partner_score'});
             app.PartnerTable.UserData = pt.partner_index;
             app.translateTableHeaders(app.PartnerTable);
-            app.PartnerTable.ColumnWidth = {100, 100, 150, 150, 110};
+            app.PartnerTable.ColumnWidth = {92, 80, 120, 120, 95};
             sel = uiText("Selected: %s (%s)", string(p.entity_id), uiText(ctx.status));
             if ismember('truth', b.entities.Properties.VariableNames)
                 % Shown after scoring, for evaluation; the detectors never use it.
@@ -260,21 +271,15 @@ classdef NetworkBehaviorExplorer < handle
             end
             app.safePlot(app.TimeAxes, @() plotActivityTimeline(app.TimeAxes, b, ...
                 app.Selected, tEnd));
-            app.safePlot(app.MapAxes, @() plotSpatialView(app.MapAxes, b, app.Selected, ...
-                frame.t0, frame.t1));
-            if ~isempty(app.Selected)
-                % Runs inside the Play timer: an error here must not kill the
-                % timer while the button still says "Pause".
-                try
-                    app.NetInfo = plotEgoNetwork(app.NetAxes, b, app.Selected, 2, ...
-                        app.maxGraphNodes(), app.networkCutoff());
-                    app.NetInfo.plot.ButtonDownFcn = @(~, evt) app.onGraphClick(evt);
-                catch ME
-                    app.stopTimer();
-                    app.PlayButton.Text = char(uiText("Play"));
-                    showAxesMessage(app.NetAxes, uiText("Network view unavailable: %s", ME.message), app.Theme);
-                end
+            % The relative-space view is unavailable for datasets without
+            % coordinates; do not rebuild its explanatory message each frame.
+            if ds.has_coordinates
+                app.safePlot(app.MapAxes, @() plotSpatialView(app.MapAxes, b, app.Selected, ...
+                    frame.t0, frame.t1));
             end
+            % Keep the selected device's full-run network snapshot fixed during
+            % playback. Rebuilding GraphPlot + its layout every 0.8 s caused
+            % avoidable UI stalls. The timeline remains live.
             drawnow limitrate;
         end
     end
@@ -299,11 +304,14 @@ classdef NetworkBehaviorExplorer < handle
             app.MainGrid = uigridlayout(app.Figure, [4 2]);
             g = app.MainGrid;
             g.RowHeight = {82, 26, '1x', 44};
-            g.ColumnWidth = {430, '1x'};
+            g.ColumnWidth = {390, '1x'};
             g.Padding = [16 12 16 8];
             g.RowSpacing = 8;
             g.ColumnSpacing = 14;
             app.setIf(g, 'BackgroundColor', th.color.surface);
+            % The adaptive layout callback manages the top-level grid itself.
+            % Disable automatic child resizing so SizeChangedFcn can run.
+            app.setIf(app.Figure, 'AutoResizeChildren', 'off');
 
             app.buildHeader();
             app.buildSummary();
@@ -320,9 +328,11 @@ classdef NetworkBehaviorExplorer < handle
             if isempty(app.MainAreaGrid) || ~isvalid(app.MainAreaGrid)
                 return;
             end
-            if app.Figure.Position(3) < 1280
-                app.MainGrid.ColumnWidth = {360, '1x'};
-                app.RankTable.ColumnWidth = {88, 58, 62, 70, 60};
+            fp = app.Figure.Position;
+            app.MainGrid.Position = [1 1 fp(3) fp(4)];
+            if fp(3) < 1280
+                app.MainGrid.ColumnWidth = {340, '1x'};
+                app.RankTable.ColumnWidth = {76, 48, 56, 70, 54};
                 app.MainAreaGrid.RowHeight = {240, 280, 260};
                 app.NetPanel.Layout.Row = 1;
                 app.NetPanel.Layout.Column = [1 2];
@@ -330,8 +340,8 @@ classdef NetworkBehaviorExplorer < handle
                 app.DetailsPanel.Layout.Column = [1 2];
                 app.TimelinePanel.Layout.Row = 3;
             else
-                app.MainGrid.ColumnWidth = {430, '1x'};
-                app.RankTable.ColumnWidth = {108, 68, 74, 88, 68};
+                app.MainGrid.ColumnWidth = {390, '1x'};
+                app.RankTable.ColumnWidth = {94, 56, 64, 80, 64};
                 % Move the third-row panel before reducing the grid rows.
                 app.NetPanel.Layout.Row = 1;
                 app.NetPanel.Layout.Column = 1;
@@ -401,10 +411,10 @@ classdef NetworkBehaviorExplorer < handle
             s.RowSpacing = 6;
             app.setIf(s, 'BackgroundColor', th.color.surface);
             app.label(s, uiText("Ranking"), th.font.title, th.color.text, 'bold');
+            % Apply the filter when editing is committed, not on every key.
             app.SearchField = uieditfield(s, 'text', 'FontName', th.font.family, ...
                 'Tag', 'EntitySearch', ...
                 'FontSize', th.font.base, ...
-                'ValueChangingFcn', @(~, evt) app.onSearch(evt.Value), ...
                 'ValueChangedFcn', @(src, ~) app.onSearch(src.Value));
             app.setIf(app.SearchField, 'Placeholder', char(uiText("Search ID")));
             app.FilterDrop = uidropdown(s, 'Items', cellfun(@(x) char(uiText(x)), app.FilterItems, ...
@@ -482,7 +492,7 @@ classdef NetworkBehaviorExplorer < handle
             m.Layout.Row = 3;
             m.Layout.Column = 2;
             m.RowHeight = {'1.2x', '1x'};
-            m.ColumnWidth = {'1x', '1x'};
+            m.ColumnWidth = {'1x', '1.15x'};
             m.Padding = [0 0 0 0];
             m.RowSpacing = 10;
             m.ColumnSpacing = 14;
@@ -931,7 +941,7 @@ classdef NetworkBehaviorExplorer < handle
             b = app.Bundle;
             try
                 app.NetInfo = plotEgoNetwork(app.NetAxes, b, app.Selected, 2, ...
-                    app.maxGraphNodes(), app.networkCutoff());
+                    app.maxGraphNodes(), NaT);
                 app.NetInfo.plot.ButtonDownFcn = @(~, evt) app.onGraphClick(evt);
             catch ME
                 app.NetInfo = struct('nodes', [], 'plot', []);

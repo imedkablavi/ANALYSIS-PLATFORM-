@@ -44,6 +44,14 @@ if nSkip > 0
     args = [args, {'NumHeaderLines', nSkip}];
 end
 opts = detectImportOptions(path, args{:});
+% MATLAB's delimiter inference can return Var1/Var2 for small CSV fixtures
+% and some user files. The extension is authoritative for these formats.
+switch lower(string(ext))
+    case ".csv"
+        opts.Delimiter = ',';
+    case ".tsv"
+        opts.Delimiter = sprintf('\t');
+end
 cols = textColumns(textColumns ~= "" & ismember(textColumns, string(opts.VariableNames)));
 if ~isempty(cols)
     opts = setvartype(opts, cellstr(cols), 'string');

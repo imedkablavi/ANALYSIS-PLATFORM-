@@ -8,10 +8,10 @@ function info = plotEgoNetwork(ax, bundle, entityIndex, hops, maxNodes, cutoffTi
 %   events, edge width = shared events; the selected entity keeps its
 %   score colour and is marked by an ink ring. With CUTOFFTIME (exclusive
 %   window end, as in buildPlaybackFrame), ties whose first shared event
-%   is on or after it are hidden (temporal playback). They are hidden, not
-%   removed, so the layout is computed on the same graph in every frame
-%   and nodes do not jump during replay. No node labels (no identifiers
-%   in exported figures).
+%   is on or after it are hidden. Coordinates are deterministic radial
+%   positions (ego at centre, one-hop and two-hop neighbours on rings);
+%   no force-layout solver is run, so changing the selected device is fast
+%   and repeatable. No node labels (no identifiers in exported figures).
 %   INFO.nodes maps plotted node k to entity index INFO.nodes(k);
 %   INFO.plot is the GraphPlot handle (for click selection).
 
@@ -44,6 +44,14 @@ end
 % whether subgraph keeps or sorts the requested order.
 cand = sort(cand(:));
 H = subgraph(G, cand);
+if hubMode
+    layer = ones(numel(cand), 1);
+    layer(cand == entityIndex) = 0;
+else
+    layer = d(cand);
+    layer = layer(:);
+end
+[x, y] = egoRadialCoordinates(layer);
 future = false(numedges(H), 1);
 if ~isnat(cutoffTime) && numedges(H) > 0
     future = H.Edges.FirstTime >= cutoffTime;
@@ -56,8 +64,8 @@ if numedges(H) > 0
 else
     lw = 1;
 end
-p = plot(ax, H, 'Layout', 'force', 'NodeLabel', {}, 'EdgeAlpha', 0.45, ...
-    'LineWidth', lw, 'EdgeColor', th.semantic.edge);
+p = plot(ax, H, 'XData', x, 'YData', y, 'NodeLabel', {}, ...
+    'EdgeAlpha', 0.45, 'LineWidth', lw, 'EdgeColor', th.semantic.edge);
 if any(future)
     [fs, ft] = findedge(H, find(future));
     highlight(p, fs, ft, 'LineStyle', 'none');
@@ -123,15 +131,36 @@ cb.TickDirection = 'out';
 styleAxes(ax, th);
 axis(ax, 'off');
 if hubMode
-    ttl = uiText("%s: %d strongest of %d ties", uiText(ds.network_label), numnodes(H) - 1, deg);
+    ttl = uiText("%d strongest connections shown (%d total)", numedges(H), deg);
 else
-    ttl = uiText("%s within %d hops (%d %s, %d ties)", uiText(ds.network_label), ...
-        hops, numnodes(H), uiText(ds.entity_plural), nnz(~future));
+    ttl = uiText("%d devices · %d connections · %d steps", numnodes(H), numedges(H), hops);
 end
 if ~isnat(cutoffTime)
-    ttl = uiText("%s — ties formed before %s", ttl, string(cutoffTime, ds.time_format));
+    ttl = uiText("%s · as of %s", ttl, string(cutoffTime, "dd-MMM HH:mm"));
 end
 title(ax, ttl, 'Color', th.color.text, 'FontWeight', 'normal');
 info.nodes = cand;
 info.plot = p;
+end
+
+function [x, y] = egoRadialCoordinates(layer)
+%EGORADIALCOORDINATES Deterministic concentric-ring layout for an ego graph.
+%   The selected entity (layer 0) stays at the centre. Each BFS layer is
+%   arranged evenly around its own ring. This avoids repeatedly invoking
+%   the iterative force-layout solver during interactive selection.
+n = numel(layer);
+x = zeros(n, 1);
+y = zeros(n, 1);
+levels = unique(layer(:)');
+levels = levels(isfinite(levels) & levels > 0);
+for radius = levels
+    idx = find(layer == radius);
+    count = numel(idx);
+    if count == 0
+        continue;
+    end
+    angles = -pi/2 + (0:count-1)' * (2*pi/count);
+    x(idx) = radius * cos(angles);
+    y(idx) = radius * sin(angles);
+end
 end

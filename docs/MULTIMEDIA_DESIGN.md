@@ -48,8 +48,8 @@ styling on older releases instead of failing.
   "Export".
 - **Sidebar**: six KPI tiles from `kpiSummary(bundle)` (label · value · detail; values compacted by
   `formatCount`: 1,284 / 12.3K / 1.5M), then search (entity-ID substring, case-insensitive, live),
-  filter dropdown and the ranking table from `filterRanking`. The selected entity's row is tinted,
-  whichever view selected it.
+  filter dropdown and the ranking table from `filterRanking`. Search filtering runs when editing
+  is committed, not on each keystroke. The selected entity's row is tinted, whichever view selected it.
 - **Main area**: 2×2 titled panels. The detail panel keeps every tab of the previous version.
 - **Replay bar** and **status bar** (messages, current selection, the permanent disclaimer).
 - **Empty state**: with no bundle at all the app opens with "—" tiles and panels that invite
@@ -146,22 +146,22 @@ network. No UI text calls a scored entity criminal, guilty or a suspect.
   ranking-row highlight.
 - **Overview → zoom/filter → details on demand** (Shneiderman 1996): KPI tiles and ranking (with
   search) → ego network and time window → evidence and events.
-- **Replay**: slider, Play/Pause, Step, Reset, window length (months). Each step recomputes the
-  window with `buildPlaybackFrame`: ties appear at their first shared event (hidden only while
-  replaying the past; at the last month the full network is shown so the graph agrees with the
-  Partners tab), the density view shows the window's events, the timeline cursor moves, unusual
-  months are labelled in the replay bar. The timer callback is wrapped in try/catch and always
-  stops cleanly (`stopTimer`) on error, on dataset change and on close. Replay controls are
-  disabled for datasets without dated events.
+- **Replay**: slider, Play/Pause, Step, Reset, window length (months, weeks, days or hours).
+  Each step recomputes the observation window with `buildPlaybackFrame`; the timeline cursor and
+  time-window views update, and unusual periods are labelled in the replay bar. The network graph
+  remains a full-run snapshot for the selected entity during playback: it is not rebuilt every
+  timer tick, because repeated graph layout was a major source of interface stalls. The timer
+  callback is wrapped in try/catch and always stops cleanly (`stopTimer`) on error, on dataset
+  change and on close. Replay controls are disabled for datasets without dated events.
 - **Robustness**: each view is drawn through `safePlot`; a view that cannot be drawn for an imported
   dataset shows a message in its own panel instead of breaking the others.
 
 ## Animation and audio principles
 
-- Animation is used only for what actually changes over time (ties appearing, activity moving)
-  and is user-controlled (pause/step/reset). Tversky, Morrison & Bétrancourt (2002) found little
-  evidence that animation beats static graphics unless it is interactive and congruent with the
-  content, so replay is an interactive tool, not an automatic effect.
+- Animation is used only for what actually changes over time (activity and the selected time
+  window) and is user-controlled (pause/step/reset). The network view remains a stable reference
+  snapshot during replay. Tversky, Morrison & Bétrancourt (2002) found little evidence that
+  animation beats static graphics unless it is interactive and congruent with the content.
 - No decorative motion; one month per step at 0.8 s.
 - Optional audio cue (short 880 Hz tone) when the replay enters an unusual month; off by default
   (`cfg.app.audio_cues`); every audio event also has a visual label, so nothing depends on sound.
@@ -221,3 +221,14 @@ analysis text and numerical results are not rewritten.
 Copy rules: docs/UI_COPY_GUIDE.md. User guides: docs/KULLANIM_KILAVUZU.md and
 docs/USER_GUIDE_EN.md. Runtime acceptance: docs/UI_ACCEPTANCE_TR_EN.md.
 No new GUI screenshots or successful callback runs are asserted by this record.
+
+
+## UI responsiveness hardening — 2026-11-27
+
+The network neighbourhood now uses deterministic concentric-ring coordinates instead of a
+force-layout solve for every selection. Playback updates the timeline and supported time-window
+views without rebuilding the network graph on every timer tick. Ranking search is applied when
+editing is committed, and the initial evidence/partner tables are bounded to 500 flow rows and
+150 partners to keep first paint responsive. The top-level grid resizes through the explicit
+`SizeChangedFcn` path. These changes require GUI acceptance in the target MATLAB release; source
+updates alone are not treated as proof of runtime performance.
