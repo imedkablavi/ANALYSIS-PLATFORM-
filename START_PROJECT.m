@@ -21,7 +21,9 @@ rootDir = setupProject();
 
 [bundle, bundleFile] = presentationBundle(rootDir);
 if ~isempty(bundle) && strlength(string(bundleFile)) > 0 && isfile(bundleFile)
-    app = NetworkBehaviorExplorer(bundleFile);
+    % presentationBundle already loaded and validated this saved result.
+    % Pass it straight into the app instead of deserializing the MAT file twice.
+    app = NetworkBehaviorExplorer(bundle, bundleFile);
     fprintf("Network Behaviour Explorer opened from saved analysis:\n  %s\n", bundleFile);
 else
     app = NetworkBehaviorExplorer(struct([]));
