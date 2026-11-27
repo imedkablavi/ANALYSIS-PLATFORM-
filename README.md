@@ -23,14 +23,26 @@ Download the complete official CTU-13 scenario 7 flow file:
 python3 scripts/data/acquire_ctu13_scenario7.py
 ```
 
-Then, from the repository root in MATLAB:
+To open the latest saved network analysis without running the analysis again,
+use the one-command launcher from the repository root in MATLAB:
+
+```matlab
+run('START_PROJECT.m')
+```
+
+This opens all explorer views from the most recent valid saved network bundle.
+It does not overwrite the dataset, rerun the detector, or clear the workspace.
+If no valid bundle exists, the application opens in an empty state so a dataset
+can be selected explicitly.
+
+To acquire and analyse the official CTU-13 scenario 7 capture from scratch, use:
 
 ```matlab
 run scripts/run_network_demo.m
 ```
 
-The command checks the source fingerprint, analyses the capture and opens the
-application on the resulting bundle. No model scores are supplied in advance.
+That separate demo command verifies the source fingerprint, analyses the capture
+and opens the resulting bundle. No model scores are supplied in advance.
 
 ## Import a dataset
 
