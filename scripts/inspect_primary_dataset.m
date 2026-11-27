@@ -1,41 +1,25 @@
 % INSPECT_PRIMARY_DATASET
-% First real-data gate for the Network Behavior Analysis project.
-%
-% Update DATA_FILE to the local downloaded artifact before running.
+% Quick look at the real artifact: validation summary and the largest
+% connected co-offending component (plotting all 17k nodes with a force
+% layout is slow and unreadable, so only the largest component is drawn).
 
-clear; clc;
+addpath(fullfile(fileparts(mfilename("fullpath"))));
+rootDir = setupProject();
+cfg = projectConfig();
+dataFile = fullfile(rootDir, cfg.data.primary_file);
+fprintf("Loading: %s\n", dataFile);
 
-DATA_FILE = fullfile("data","raw", ...
-    "israel_lea_inp_burglary_offender_id_network.json");
+data = loadBurglaryNetwork(dataFile);
+events = flattenBurglaryEvents(data, cfg.data.date_format);
+report = validateBurglaryNetwork(data, events, cfg);
+disp(report.checks);
+disp(report.summary);
 
-fprintf("Loading: %s\n", DATA_FILE);
-
-data = loadBurglaryNetwork(DATA_FILE);
-events = flattenBurglaryEvents(data);
-report = validateBurglaryNetwork(data, events);
-
-disp("=== Dataset Metadata ===");
-disp(data.metadata);
-
-disp("=== Validation ===");
-disp(report);
-
-fprintf("Nodes: %d\n", height(data.nodes));
-fprintf("Links: %d\n", height(data.links));
-fprintf("Offender-crime event rows: %d\n", height(events));
-fprintf("Unique crimes: %d\n", numel(unique(events.crime_id)));
-
-validDates = events.event_time(~ismissing(events.event_time));
-if ~isempty(validDates)
-    fprintf("Date range: %s -> %s\n", string(min(validDates)), string(max(validDates)));
-end
-
-fprintf("\nGenerating a first network plot...\n");
-G = digraph(data.links.source_id, data.links.target_id, ...
-    data.links.weight, data.nodes.entity_id);
-
-figure("Name","MOSAIC-VAD / Primary Offender Network");
-p = plot(G, "Layout","force", "NodeLabel",{});
-p.MarkerSize = 2;
-title(sprintf("Primary Offender Network — %d nodes / %d links", ...
-    numnodes(G), numedges(G)));
+[relations, ~] = buildRelationTable(events, data.nodes.entity_id);
+G = buildOffenderGraph(relations, data.nodes.entity_id);
+bins = conncomp(G);
+[~, big] = max(accumarray(bins(:), 1));
+H = subgraph(G, find(bins == big));
+figure("Name", "Largest co-offending component");
+plot(H, "Layout", "force", "NodeLabel", {}, "MarkerSize", 2);
+title(sprintf("Largest component: %d of %d offenders, %d ties", numnodes(H), numnodes(G), numedges(H)));

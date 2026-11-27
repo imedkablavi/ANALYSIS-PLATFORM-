@@ -1,213 +1,106 @@
-# Network Behavioral Analysis & Suspicious Pattern Detection
+# Network Behaviour Explorer
 
-**MATLAB-first university research project for Çoklu Ortam**
+A MATLAB application for investigating unusual host behaviour in network-flow
+records. It combines network and temporal features, a statistical baseline,
+Isolation Forest, linked visualizations and exportable evidence. Published
+attack labels are used for evaluation after scoring, never as model inputs.
 
-## Project Overview
+[Türkçe kullanım kılavuzu](docs/KULLANIM_KILAVUZU.md) · [English user guide](docs/USER_GUIDE_EN.md) · [شرح الكود والملفات](docs/CODE_GUIDE_AR.md)
 
-This repository implements the professor's assigned network/behavior analysis topic at a deeper technical level without replacing the original topic.
+[نقل النسخة الحالية إلى Windows وأوامر MATLAB](docs/WINDOWS_TRANSFER_AR.md)
 
-The system is designed around **real, documented, anonymized research data**. It builds observable behavioral profiles, analyzes changes over time, models relationships as graphs, discovers repeated/sequential patterns, detects deviations from a reference baseline, produces explainable evidence, and communicates the results through an interactive MATLAB App Designer application.
+[Öğretim üyesi için proje durumu ve çalıştırma](docs/PROJE_DURUMU_TR.md)
 
-> **Important:** An anomaly score describes deviation from an analytical baseline. It is not a determination that a real person is criminal.
+## Run the network case study
 
-## Core Research Pipeline
+Requirements: MATLAB R2021b or later with Statistics and Machine Learning
+Toolbox. Current changes require execution on the target MATLAB installation;
+static analysis alone does not establish runtime compatibility.
 
-```text
-Real Dataset
-    ↓
-Data Ingestion & Validation
-    ↓
-Preprocessing
-    ↓
-Entity / Event Representation
-    ↓
-Feature Engineering
-    ↓
-Behavioral Profiles
-    ↓
-┌──────────────┬──────────────┬──────────────┐
-│ Temporal     │ Graph        │ Sequence     │
-│ Analysis     │ Analysis     │ Analysis     │
-└──────────────┴──────────────┴──────────────┘
-                    ↓
-            Anomaly Detection
-                    ↓
-             Pattern Mining
-                    ↓
-              Explainability
-                    ↓
-         Interactive Multimedia UI
-                    ↓
-              Evaluation
+Download the complete official CTU-13 scenario 7 flow file:
+
+```sh
+python3 scripts/data/acquire_ctu13_scenario7.py
 ```
 
-## Why the project is deeper than a simple visualization
+Then, from the repository root in MATLAB:
 
-A static network graph shows structure. This project additionally asks:
-
-- What is the reference/normal behavior?
-- How does that behavior change over time?
-- Which interactions or structural changes are unusual?
-- Which event sequences repeat or become novel?
-- Which network features contribute to the anomaly signal?
-- Can the user inspect the evidence behind an alert?
-- Can the same event be replayed through synchronized timeline/network views?
-
-## Primary Technology Stack
-
-### MATLAB — primary language and application platform
-
-Used for:
-
-- data processing,
-- feature engineering,
-- statistical analysis,
-- machine learning,
-- anomaly detection,
-- graph/network analysis,
-- visualization,
-- multimedia processing where needed,
-- evaluation,
-- MATLAB App Designer.
-
-### MATLAB Toolboxes
-
-Required/conditional according to the selected dataset:
-
-- MATLAB
-- MATLAB App Designer
-- Statistics and Machine Learning Toolbox
-- Computer Vision Toolbox — only if justified
-- Image Processing Toolbox — only if justified
-- Signal Processing Toolbox — only if justified
-- Audio Toolbox — only if justified
-- Parallel Computing Toolbox — only if needed
-
-### Python — secondary utility only
-
-Python may be used for a narrowly justified dataset conversion, specialized preprocessing step, model conversion/export, or reference verification.
-
-Python is **not** the main application stack.
-
-## Primary Dataset Candidate
-
-The first candidate is the public **Criminal Network Analysis and Visualization** dataset repository:
-
-https://github.com/erichoang/criminal-network-visualization
-
-Its documentation describes anonymized burglary-related data, including network-ready offender/crime representations and temporal/spatial information.
-
-Dataset acquisition is documented in:
-
-- `docs/DATASETS.md`
-- `docs/DATASET_ACQUISITION.md`
-- `data/DATASET_CARD.md`
-
-**Do not commit raw data before verifying the applicable terms.**
-
-## Multimedia Application
-
-The final MATLAB application is expected to include:
-
-- Dashboard
-- Interactive network graph
-- Timeline
-- Anomaly/event highlighting
-- Entity detail
-- Behavioral profile
-- Heatmap/spatial view when supported
-- Event replay
-- Pattern view
-- Exportable analytical summary
-
-The multimedia layer is an analytical interface, not decoration.
-
-## Planned Repository Structure
-
-```text
-.
-├── README.md
-├── PROJECT_CONTEXT.md
-├── AGENTS.md
-├── CHANGELOG.md
-├── LICENSE.txt
-├── data/
-│   ├── DATASET_CARD.md
-│   ├── raw/
-│   ├── processed/
-│   └── samples/
-├── docs/
-│   ├── PROJECT_BRIEF.md
-│   ├── ASSIGNMENT_SOURCE.md
-│   ├── REQUIREMENTS.md
-│   ├── ARCHITECTURE.md
-│   ├── DATASETS.md
-│   ├── DATASET_ACQUISITION.md
-│   ├── DATA_DICTIONARY.md
-│   ├── FEATURE_ENGINEERING.md
-│   ├── BEHAVIOR_MODEL.md
-│   ├── TEMPORAL_ANALYSIS.md
-│   ├── SPATIAL_ANALYSIS.md
-│   ├── GRAPH_ANALYSIS.md
-│   ├── SEQUENCE_ANALYSIS.md
-│   ├── ANOMALY_DETECTION.md
-│   ├── PATTERN_MINING.md
-│   ├── EXPLAINABILITY.md
-│   ├── MULTIMEDIA_DESIGN.md
-│   ├── MATLAB_STACK.md
-│   ├── PYTHON_POLICY.md
-│   ├── EXPERIMENTS.md
-│   ├── EVALUATION.md
-│   ├── 30_DAY_ROADMAP.md
-│   ├── TASKS.md
-│   ├── MILESTONES.md
-│   ├── DEFINITION_OF_DONE.md
-│   ├── DEMO_SCENARIO.md
-│   ├── GITHUB_WORKFLOW.md
-│   ├── ISSUE_TEMPLATE.md
-│   ├── AGENT_EXECUTION_PROMPT.md
-│   ├── RESEARCH_LOG.md
-│   ├── SOURCE_INDEX.md
-│   ├── RISKS.md
-│   └── TURKISH_PROJECT_PROPOSAL.md
-├── models/
-├── outputs/
-├── src/
-└── app/
+```matlab
+run scripts/run_network_demo.m
 ```
 
-## 30-Day Delivery Strategy
+The command checks the source fingerprint, analyses the capture and opens the
+application on the resulting bundle. No model scores are supplied in advance.
 
-### Days 1–7
-Scope freeze, dataset verification, ingestion, validation, preprocessing.
+## Import a dataset
 
-### Days 8–16
-Feature engineering, behavior profiles, temporal/network/sequence analysis, statistical baseline.
+Use **Open dataset…** in the application or call:
 
-### Days 17–20
-Isolation Forest or another justified anomaly detector, threshold protocol, ablation and explainability.
+```matlab
+addpath scripts
+setupProject()
+b = analyzeDataset("data/external/capture.binetflow");
+app = NetworkBehaviorExplorer(b);
+```
 
-### Days 21–27
-MATLAB App Designer, dashboard, graph view, timeline, replay, heatmap if supported, usability refinement.
+Supported network layouts: CTU-13 binetflow, CIC-IDS2017 GeneratedLabelledFlows,
+UNSW-NB15 with host/time columns, and LANL authentication/flow records.
+Custom network-flow tables can use editable source/destination/time mappings, optional traffic fields and explicit timestamp units/formats. [Import a new dataset](docs/YENI_VERI_SETI.md).
+Generic delimited event tables require an entity and timestamp; temporal edge
+lists require source, destination and timestamp. Column mapping is available
+when names are not detected. Arbitrary JSON, spreadsheets and packet captures
+are not general import formats. See [dataset import](docs/DATASET_IMPORT.md).
 
-### Days 28–30
-Reproducibility run, evaluation, report, presentation, demo, repository cleanup and release.
+## Investigate and export
 
-## Project Status
+Select a host to inspect its measured deviations, reference population,
+network neighbourhood and supporting flow records. The provenance tab shows
+data fingerprints and run context. Replay changes the observation window;
+saved host scores describe the full analysed capture. Export includes figures,
+measured feature evidence, bounded flow tables and a JSON investigation record.
+A statistical deviation is not a probability of maliciousness.
 
-Current status: **Foundation / Scope & Data Planning**
+## Data and evaluation
 
-No model performance is claimed until the real dataset is inspected and experiments are executed.
+The official case study contains 114,077 flows and 38,204 hosts. Under the
+recorded host-label mapping, one malicious and six benign hosts are eligible;
+2,449 additional eligible hosts have unknown labels. These are independently
+audited source counts, not MATLAB detector results. This small labelled
+population limits conclusions from a single scenario.
 
-## First Gate
+[Source, hashes and audit](docs/REAL_CAPTURE_EVIDENCE.md) ·
+[Technical report](docs/report/TECHNICAL_REPORT.md) ·
+[Architecture](docs/ARCHITECTURE.md)
 
-Before implementing the analytical core:
+## Reproduce checks
 
-1. Record the exact professor assignment wording in `docs/ASSIGNMENT_SOURCE.md`.
-2. Acquire the primary dataset.
-3. Verify its terms and version.
-4. Inspect the real schema in MATLAB.
-5. Complete `data/DATASET_CARD.md`.
-6. Implement the first reproducible ingestion/validation pipeline.
+```sh
+python3 -m unittest discover -s tests/reference -p 'test_*.py' -v
+mh_lint .
+```
 
-See `docs/TASKS.md` for the task board.
+In MATLAB:
+
+```matlab
+addpath scripts
+verify_delivery("data/external/ctu13-scenario7.binetflow")
+```
+
+Verification retains test results, source/configuration fingerprints and
+experiment artifacts under `outputs/verification/`. It records failures and
+incomplete runs explicitly. Interactive GUI acceptance is a separate check.
+Current implementation and verification status: [task board](docs/TASKS.md).
+
+Raw data, local identifiers and generated analytical outputs stay out of Git.
+The earlier burglary-network case study remains available through
+`scripts/run_pipeline.m`; it is separate from the computer-network case study.
+
+## Presentation and test data
+
+The presentation directory contains the complete official CTU-13 capture.
+Upstream software-test samples were removed. The public launcher selects a
+saved network analysis or opens an empty interface. It never generates data
+when an analysis is missing. Default experiments and delivery verification
+use observed data; explicitly requested research perturbations are isolated
+under `research_synthetic/`. Unit-test fixtures remain in `tests/` and are not
+a fallback data source for the application.

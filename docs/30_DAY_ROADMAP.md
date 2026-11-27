@@ -1,77 +1,56 @@
-# 30-Day Roadmap
+# Remaining delivery roadmap — recalculated 2026-10-31
 
-## Days 1–3 — Scope and dataset
-- freeze assignment interpretation,
-- verify dataset license/terms,
-- download primary candidate,
-- inspect schema,
-- create dataset card.
+The original October 1–30 calendar is historical, not a completed schedule. The
+remaining work below is ordered by dependencies, without inventing a new submission
+date. Exact assignment and deadline confirmation remain external inputs.
 
-**Gate:** data can be loaded in MATLAB.
+Historical evidence: CHANGELOG records 114/114 MATLAB Online tests on 2026-10-27.
+Current fixes/new tests have not run in MATLAB. Official complete CTU-13 scenario 7
+is already local and independently audited; downloading network data is no longer
+the main blocker. See `docs/TASKS.md` for per-task evidence/status.
 
-## Days 4–7 — Data pipeline
-- validation,
-- cleaning,
-- normalization,
-- entity/event tables,
-- first exploratory plots.
+## Stage 1 — Current execution gate
 
-**Gate:** reproducible `run_pipeline` works.
+- Obtain an available MATLAB runtime and required toolbox; run `scripts/run_tests.m`.
+- Run `scripts/run_network_demo.m` on pinned scenario 7, inspect canonical counts,
+  validation warnings, label attribution, flow features and graph cost guards.
+- Run current experiments, generate figures and `scripts/verify_delivery.m`; retain
+  errors, source/configuration fingerprints, elapsed time and verification manifest.
+- Gate: current tests pass and current real-data outputs are traceable. Python
+  reference results or historical tests alone do not satisfy this gate.
 
-## Days 8–12 — Feature engineering
-- temporal features,
-- network features,
-- optional spatial features,
-- sequence representation,
-- feature quality checks.
+## Stage 2 — Results and interface verification
 
-**Gate:** versioned feature matrix generated.
+- Interpret generated E1–E9/ground-truth metrics; separate synthetic injections,
+  observed published labels and unknown-background assumptions.
+- Document that scenario 7 contains only one labelled malicious host: no broad
+  detector-generalization or precision claims from that small positive population.
+- Review actual top-ranked explanations and launch the revised app; verify linked
+  graph, minute timeline, traffic details, chronological replay and privacy.
+- Adapt demo instructions/E10 answer key to a short computer-network capture;
+  spatial/yearly burglary tasks cannot be reused unchanged.
+- Gate: repeatable current demo walkthrough and actual outputs ready for reporting.
 
-## Days 13–16 — Baseline analysis
-- statistical anomaly baseline,
-- graph metrics,
-- initial pattern mining,
-- baseline visualization.
+## Stage 3 — Human inputs and E10
 
-**Gate:** first measurable anomaly result.
+- Acquire the professor's exact wording, course/author details and submission constraints.
+- Confirm report language and presentation format; decide how to resolve the
+  unsupported “better than tables” comparison claim (comparison study or narrower question).
+- Confirm institutional requirements for volunteer sessions; review Turkish SUS wording.
+- If E10 is retained: pilot then 5–8 actual volunteer sessions, private anonymous
+  responses, scoring and explicit study limitations. Templates are not results.
+- Gate: authentic study evidence or an explicit documented scope exclusion.
 
-## Days 17–20 — ML and explainability
-- Isolation Forest,
-- threshold evaluation,
-- feature ablation,
-- evidence generation.
+## Stage 4 — Delivery artifacts
 
-**Gate:** reproducible experiment report.
-
-## Days 21–25 — MATLAB App Designer
-- dashboard,
-- network view,
-- timeline,
-- entity detail,
-- filtering,
-- replay.
-
-**Gate:** app can inspect at least one detected anomaly end-to-end.
-
-## Days 26–27 — Multimedia refinement
-- animation polish,
-- heatmap/spatial view if supported,
-- optional audio cues,
-- accessibility/readability checks.
-
-## Days 28–29 — Final validation
-- clean clone test,
-- performance check,
-- regression test,
-- screenshots,
-- demo dataset package if allowed.
-
-## Day 30 — Delivery
-- final report,
-- presentation,
-- demo script,
-- GitHub cleanup,
-- release tag.
+- Extend the written factual report with detector/experiment results only from generated current artifacts; add confirmed academic metadata.
+- Build final slides and demo backup; synchronize report, figures, README and task board.
+- Reproduce from a clean checkout on the delivery machine, verify manifests, then release.
+- Gate: complete report, presentation, demonstrable application and traceable evidence.
 
 ## Scope rule
-If a task threatens the core pipeline, cut optional features before cutting data quality, evaluation, or explainability.
+
+Optional audio and visual polish can be deferred. Additional CIC/UNSW/LANL
+real-capture evaluations and future-time holdout experiments remain extensions;
+implemented profiles are not proof of real-data validation. Preserve validation,
+unknown-label handling, eligibility, explanation/privacy rules and truthful limits.

@@ -1,38 +1,64 @@
 # Evaluation Plan
 
-## If ground truth exists
+## Ground truth
 
-Use appropriate classification/detection metrics:
+**Network datasets (CTU-13, CIC-IDS2017, UNSW-NB15, LANL)** carry published labels. They are
+converted to host labels (`networkGroundTruth`: malicious / benign / unknown) and used **only after
+scoring** to measure ROC-AUC, average precision against its chance level and precision/recall at
+k (E11, docs/NETWORK_DATASETS.md). Unlabelled hosts (CTU-13 Background) are never treated as
+verified benign: results are reported for known-label hosts and, separately, with unknown hosts
+as negatives. Benchmark labels say how a ranking behaves on these captures; they do not make a
+score a verdict about a host.
 
-- Precision
-- Recall
-- F1
-- ROC-AUC
-- PR-AUC / Average Precision
-- false positive rate
+**Burglary case study:** none exists in the artifact, and none is fabricated. Consequently, no
+precision/recall/ROC claims about real offenders are possible.
 
-For time-localized events, also report temporal overlap or interval-based localization metrics where labels support them.
+## What is evaluated instead
 
-## If ground truth is incomplete or absent
+| Question | Method | Metrics |
+|---|---|---|
+| Is the data fit for analysis? | validation (E1) | failed checks by severity |
+| Are detectors sensitive to known deviations? | **synthetic** injection per feature group (E5–E7), in the spirit of controlled benchmark construction (Emmott et al. 2013) | ROC-AUC, average precision (chance = injected fraction), precision at m (m = injected rows) — Campos et al. (2016) |
+| Which information matters? | ablation: real-data ranking consistency (E4) + injection detection per feature set (E5–E7) | top-k Jaccard, Spearman; AUC/AP |
+| Are results stable? | seeds, forest size, sample size, eligibility, budget (E8) | pairwise top-k Jaccard, Spearman |
+| Do the two detectors agree? | E3 | Spearman, top-k Jaccard |
+| Is temporal detection sensible? | causal rule on real months + change points; seasonality check (T-043) | flagged months vs calendar month |
+| Is it fast enough? | E9 | seconds per stage, MB |
 
-Do not invent labels.
+### Synthetic injection protocol
 
-Use:
+1. Take the prepared robust-z matrix of the real eligible population.
+2. Choose 1 % of rows at random (seeded).
+3. For one feature group, move each feature 3 or 5 robust SD further from the median in the
+   direction it already deviates (random sign when z = 0).
+4. For every feature set, fit Isolation Forest on the CLEAN reference matrix and score the
+   contaminated matrix (novelty detection; injected rows never enter training). The robust
+   baseline stays in the clean reference frame. Forests are cached per (feature set, repeat).
+5. Repeat 10 times; report mean and SD.
 
-- expert-defined reference rules,
-- synthetic perturbation tests clearly labeled as synthetic,
-- stability analysis,
-- manual qualitative review with a documented protocol.
+Limits: injected deviations are axis-aligned and group-coherent; real unusual behaviour need not
+look like that. Results measure **sensitivity**, not real-world accuracy, and are always labelled
+SYNTHETIC (file prefix `synthetic_`).
 
-## Application evaluation
+## Application evaluation (E10, human)
 
-Measure task completion for the multimedia UI:
+5–8 participants (classmates), think-aloud, after a 3-minute introduction:
 
-- time to locate a flagged event,
-- time to explain the alert,
-- successful interaction rate,
-- qualitative clarity feedback.
+| Task | Measure |
+|---|---|
+| T1 Find the highest-ranked offender record and state the dominant feature group | time, correctness |
+| T2 Explain in one sentence why it was flagged, using the evidence tab | rubric (mentions ≥ 2 concrete deviations, no guilt language) |
+| T3 Find when this offender's first co-offending tie appeared (replay) | time, correctness |
+| T4 Identify an unusual month and say whether it could be seasonal | correctness |
+| T5 Find a record that is *not* scored and explain why | correctness |
+
+Plus SUS questionnaire (10 items) and one open question. Report model performance and usability
+separately.
+
+Full protocol, scoring rubric, forms and scoring code: docs/USABILITY_STUDY.md
+(forms in docs/usability/; `scoreSUS`, `summarizeUsabilityLog`). Sessions not yet run.
 
 ## Reporting principle
 
-Always separate model performance from visual/interaction usability.
+Separate: data quality, detector behaviour, synthetic sensitivity, stability, usability. State
+the absence of ground truth in every results section.

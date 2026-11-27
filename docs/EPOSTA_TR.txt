@@ -1,0 +1,18 @@
+Konu: Ağ davranışı analizi projesinin güncel sürümü
+
+Hocam merhaba,
+
+Ağ bağlantı kayıtlarında alışılmadık cihaz davranışlarını incelemek için geliştirdiğim MATLAB projesinin güncel sürümünü ekte paylaşıyorum.
+
+Projede veri dosyasını içe alma ve kontrol etme, cihazların trafik ve ağ özelliklerini çıkarma, istatistiksel bir yöntemle Isolation Forest sonuçlarını karşılaştırma bölümleri bulunuyor. Arayüzde bir cihazın bağlantıları, zaman içindeki etkinliği, model puanları ve bu puanlarla birlikte incelenebilecek ölçümler gösteriliyor. Türkçe ve İngilizce dil seçimi ile CSV, JSON ve görsel dışa aktarma seçenekleri de mevcut.
+
+İnceleme için CTU-13 veri setinin 7. ve 11. senaryolarını ekledim. Bunlar yayımlanmış gerçek bağlantı kayıtlarıdır. Örneğin 7. senaryodaki 114.077 bağlantı kaydı veri dosyasından sayılmıştır; bu sayı modelin başarısını ifade etmiyor. Etiketler puanlama sonrasında değerlendirme için kullanılıyor.
+
+Son incelemede dışa aktarılan metindeki sayıları, eksik trafik sütunlarını ve yalnızca istatistiksel yöntemle çalıştırılan deneylerin karşılaştırma sonuçlarını etkileyen hatalar için kod düzeltmeleri ve testler eklendi. MATLAB dosyalarının statik kontrolü ve üç Python referans testi başarılı. Ancak bu son değişikliklerin MATLAB içindeki testleri ve arayüz denemesi henüz tamamlanmadı. Bu nedenle çalışmayı hatasız veya değerlendirmesi tamamlanmış bir sürüm olarak sunmuyorum. Güncel model başarı ölçümlerini ve son rapor sonuçlarını da bu çalıştırmadan sonra tamamlayacağım.
+
+Ekteki proje MATLAB R2021b veya üzeri ve Statistics and Machine Learning Toolbox gerektiriyor. Çalıştırma adımları docs/PROJE_DURUMU_TR.md dosyasında yer alıyor. GitHub'da güncel çalışmayı PR #13 üzerinden inceleyebilirsiniz:
+https://github.com/imedkablavi/ANALYSIS-PLATFORM-/pull/13
+
+Kapsam ve değerlendirme yöntemi hakkındaki görüşlerinizi almak isterim.
+
+Saygılarımla.

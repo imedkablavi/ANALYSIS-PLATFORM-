@@ -1,34 +1,31 @@
-# Behavior Modeling
+# Behaviour Model
 
-## Behavioral profile
+## Profile
 
-For each supported entity, create a profile from historical/reference observations.
-
-Conceptual profile:
+Each offender's profile is one row of `bundle.entities`:
 
 ```text
-Entity
- ├─ Temporal baseline
- ├─ Interaction baseline
- ├─ Network baseline
- ├─ Spatial baseline (optional)
- └─ Sequence baseline
+Entity (OID#n)
+ ├─ Activity      event_count, active span, active days
+ ├─ Temporal      gap median/CV, burstiness, dormancy ratio, busiest-30-day share, same-day share
+ ├─ Spatial       radius of gyration, step distances, repeated sites   (normalized space)
+ ├─ Co-offending  group size, solo share, repeat-partner share
+ ├─ Network       degree, strength, strongest tie, clustering, k-core, component, betweenness, cut vertex
+ └─ Sequence      mean/max transition surprisal, new-partner rate
 ```
 
-## Baseline design
+## Baseline design (decision)
 
-At least two approaches should be considered:
+| Option | Decision | Reason |
+|---|---|---|
+| Static population baseline | **used** for entity anomaly scores | most offenders have 1–5 crimes; a per-entity baseline cannot be estimated for them |
+| Per-entity rolling baseline | not used for scoring | ≥ 10 events would be needed; only a few hundred offenders qualify |
+| Causal rolling baseline | **used** for system-level months | 80 monthly bins give enough history |
+| Drift within an entity | captured indirectly | `max_gap_ratio` (dormancy → reactivation), `new_partner_rate`, sequence surprisal |
 
-### Static baseline
-
-Aggregate the whole reference period.
-
-### Rolling baseline
-
-Update the baseline over time to capture behavioral drift.
-
-The final choice must be justified from data properties and the evaluation protocol.
+The reference population for the static baseline is every offender with ≥ 3 crimes (3,260).
 
 ## Output
 
-The behavior layer should produce a machine-readable profile table plus diagnostic plots.
+Machine-readable profile table (`entity_features_scores.csv`), deviation profile per entity
+(`entityEvidence`), and the "Deviation profile" tab / `fig_top_entity_evidence.png`.
