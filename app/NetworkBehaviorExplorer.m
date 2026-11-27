@@ -186,6 +186,9 @@ classdef NetworkBehaviorExplorer < handle
             if isempty(b) || isempty(entityIndex)
                 return;
             end
+            % Stop the timer before context extraction and table rebuilding.
+            app.stopTimer();
+            app.PlayButton.Text = char(uiText("Play"));
             ds = bundleDatasetInfo(b);
             try
                 ctx = getEntityContext(b, entityIndex);
@@ -193,9 +196,6 @@ classdef NetworkBehaviorExplorer < handle
                 app.setStatus(uiText("Could not read this entity: %s", ME.message));
                 return;
             end
-            % Stop an in-progress replay before switching the investigated device.
-            app.stopTimer();
-            app.PlayButton.Text = char(uiText("Play"));
             app.Selected = entityIndex;
             app.drawNetwork();
             app.safePlot(app.TimeAxes, @() plotActivityTimeline(app.TimeAxes, b, ...
@@ -228,7 +228,7 @@ classdef NetworkBehaviorExplorer < handle
                 {'partner', 'shared_events', 'first', 'last', 'partner_score'});
             app.PartnerTable.UserData = pt.partner_index;
             app.translateTableHeaders(app.PartnerTable);
-            app.PartnerTable.ColumnWidth = {100, 100, 150, 150, 110};
+            app.PartnerTable.ColumnWidth = {92, 80, 120, 120, 95};
             sel = uiText("Selected: %s (%s)", string(p.entity_id), uiText(ctx.status));
             if ismember('truth', b.entities.Properties.VariableNames)
                 % Shown after scoring, for evaluation; the detectors never use it.
