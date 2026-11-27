@@ -106,7 +106,7 @@ classdef NetworkBehaviorExplorer < handle
     end
 
     methods
-        function app = NetworkBehaviorExplorer(source)
+        function app = NetworkBehaviorExplorer(source, sourceFile)
             app.Theme = appTheme();
             % Interface language: last choice, Turkish by default.
             try
@@ -125,6 +125,11 @@ classdef NetworkBehaviorExplorer < handle
                 end
             elseif isstruct(source)
                 bundle = source;
+                % Optional source path keeps the saved-analysis catalog in sync
+                % when the already-loaded bundle is passed by the one-command launcher.
+                if nargin >= 2 && ~isempty(sourceFile)
+                    file = string(sourceFile);
+                end
             else
                 file = string(source);
                 if ~isfile(file)
