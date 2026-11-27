@@ -26,9 +26,9 @@ classdef NetworkBehaviorExplorer < handle
     %   ranking table, clicking a node in the network, or choosing a
     %   partner updates the network, timeline, relative-space view, the
     %   detector scatter and all detail tabs together. The time slider /
-    %   Play button replays the network, density view and timeline month by
-    %   month; unusual months are signalled visually and, optionally, by a
-    %   short audio cue.
+    %   Play button replays the timeline (and relative-space view when
+    %   coordinates exist). The selected device's full-run network snapshot is
+    %   kept fixed during playback to avoid rebuilding a costly graph layout.
     %
     %   Dataset import (Open dataset...) uses the dataset-import layer:
     %   inspectDatasetFile -> optional column-mapping dialog ->
@@ -218,8 +218,9 @@ classdef NetworkBehaviorExplorer < handle
                 app.EventTable.Data = app.eventDisplayTable(ctx.events, ds);
             end
             app.translateTableHeaders(app.EventTable);
-            % Busy hosts have >100,000 partners: show the 500 strongest
-            % (ctx.partners is sorted by shared events) so the table stays fast.
+            % Busy hosts can have very large neighbourhoods. Show only the
+            % strongest initial subset; the complete relation data remains in
+            % the saved analysis bundle.
             pt = ctx.partners(1:min(app.InitialPartnerRows, height(ctx.partners)), :);
             app.PartnerTable.Data = table(pt.partner_id, pt.shared_crimes, ...
                 string(pt.first_time, ds.time_format), string(pt.last_time, ds.time_format), ...
@@ -326,7 +327,7 @@ classdef NetworkBehaviorExplorer < handle
             app.MainGrid.Position = [1 1 fp(3) fp(4)];
             if fp(3) < 1280
                 app.MainGrid.ColumnWidth = {340, '1x'};
-                app.RankTable.ColumnWidth = {88, 58, 62, 70, 60};
+                app.RankTable.ColumnWidth = {76, 48, 56, 70, 54};
                 app.MainAreaGrid.RowHeight = {240, 280, 260};
                 app.NetPanel.Layout.Row = 1;
                 app.NetPanel.Layout.Column = [1 2];
@@ -335,7 +336,7 @@ classdef NetworkBehaviorExplorer < handle
                 app.TimelinePanel.Layout.Row = 3;
             else
                 app.MainGrid.ColumnWidth = {390, '1x'};
-                app.RankTable.ColumnWidth = {108, 68, 74, 88, 68};
+                app.RankTable.ColumnWidth = {94, 56, 64, 80, 64};
                 % Move the third-row panel before reducing the grid rows.
                 app.NetPanel.Layout.Row = 1;
                 app.NetPanel.Layout.Column = 1;
